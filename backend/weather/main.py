@@ -6,8 +6,8 @@ import pytz
 
 app = FastAPI(
     title="Weather (OpenMeteo) Service",
-    description="Weather API service for Boston traffic management",
-    version="1.0.0"
+    description="Weather API service for Boston traffic and energy management",
+    version="1.0.1"
 )
 
 # Configure CORS
@@ -19,47 +19,27 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Boston lat/lon
+# Boston coordinates
 LAT = 42.3601
 LON = -71.0589
 
 @app.get("/weather/openmeteo_current")
 async def get_current_weather_openmeteo():
-    # open-meteo: “current_weather” endpoint
+    """
+    Current weather with comprehensive data:
+    - is_day
+    - cloudcover
+    - shortwave_radiation (solar intensity)
+    - temperature_2m
+    - precipitation_probability (from current forecast hour)
+    - rain
+    - windspeed and direction
+    """
     url = (
         f"https://api.open-meteo.com/v1/forecast"
         f"?latitude={LAT}&longitude={LON}"
-        f"&current_weather=true"
-    )
-    async with httpx.AsyncClient() as client:
-        r = await client.get(url)
-        if r.status_code != 200:
-            raise HTTPException(status_code=500, detail="Weather API error")
-        data = r.json()
-
-    cw = data.get("current_weather", {})
-    # The Open-Meteo current_weather object includes:
-    #   - temperature (°C)
-    #   - windspeed (km/h) or similar
-    #   - wind direction
-    #   - time (ISO string)
-    # It does *not* always include precipitation probability directly; you might get that in forecast.
-    normalized = {
-        "timestamp": cw.get("time"),
-        "temperature_c": cw.get("temperature"),
-        "windspeed": cw.get("windspeed"),
-        "winddirection": cw.get("winddirection"),
-        # For rain / precipitation, you’ll need the forecast endpoint
-    }
-    return normalized
-
-@app.get("/weather/openmeteo_forecast")
-async def get_forecast_openmeteo():
-    # hourly forecast with precipitation probability, etc.
-    url = (
-        f"https://api.open-meteo.com/v1/forecast"
-        f"?latitude={LAT}&longitude={LON}"
-        f"&hourly=precipitation_probability,temperature_2m,weathercode,windspeed_10m"
+        f"&current=is_day,cloudcover,shortwave_radiation,temperature_2m,precipitation,rain"
+        f"&hourly=precipitation_probability"
         f"&forecast_days=1"
     )
     async with httpx.AsyncClient() as client:
@@ -68,37 +48,86 @@ async def get_forecast_openmeteo():
             raise HTTPException(status_code=500, detail="Weather API error")
         data = r.json()
 
-    # data["hourly"] will contain arrays for each field
+    current = data.get("current", {})
+    
+    # Get current hour's precipitation probability from hourly data
+    hourly = data.get("hourly", {})
+    current_precip_prob = None
+    if hourly.get("precipitation_probability"):
+        # Take the first hour's precipitation probability as current
+        current_precip_prob = hourly["precipitation_probability"][0]
+
+    normalized = {
+        "timestamp": current.get("time"),
+        "is_day": current.get("is_day"),
+        "cloudcover_percent": current.get("cloudcover"),
+        "shortwave_radiation_wm2": current.get("shortwave_radiation"),
+        "temperature_c": current.get("temperature_2m"),
+        "precip_prob_percent": current_precip_prob,
+        "rain_mm": current.get("rain"),
+    }
+    return normalized
+
+
+@app.get("/weather/openmeteo_forecast")
+async def get_forecast_openmeteo():
+    """
+    Hourly forecast with only essential fields:
+    - is_day
+    - cloudcover
+    - shortwave_radiation (solar intensity)
+    - temperature_2m
+    - precipitation_probability
+    - rain
+    """
+    url = (
+        f"https://api.open-meteo.com/v1/forecast"
+        f"?latitude={LAT}&longitude={LON}"
+        f"&hourly=is_day,cloudcover,shortwave_radiation,temperature_2m,precipitation_probability,rain"
+        f"&forecast_days=1"
+    )
+
+    async with httpx.AsyncClient() as client:
+        r = await client.get(url)
+        if r.status_code != 200:
+            raise HTTPException(status_code=500, detail="Weather API error")
+        data = r.json()
+
     h = data.get("hourly", {})
     times = h.get("time", [])
-    precip_probs = h.get("precipitation_probability", [])
-    temps = h.get("temperature_2m", [])
-    wind_speeds = h.get("windspeed_10m", [])
-    weathercodes = h.get("weathercode", [])
 
     results = []
     for i, t in enumerate(times):
         results.append({
             "timestamp": t,
-            "temperature_c": temps[i] if i < len(temps) else None,
-            "rain_prob": precip_probs[i] if i < len(precip_probs) else None,
-            "wind_speed": wind_speeds[i] if i < len(wind_speeds) else None,
-            "weathercode": weathercodes[i] if i < len(weathercodes) else None
+            "is_day": h.get("is_day", [None])[i] if i < len(h.get("is_day", [])) else None,
+            "cloudcover_percent": h.get("cloudcover", [None])[i] if i < len(h.get("cloudcover", [])) else None,
+            "shortwave_radiation_wm2": h.get("shortwave_radiation", [None])[i] if i < len(h.get("shortwave_radiation", [])) else None,
+            "temperature_c": h.get("temperature_2m", [None])[i] if i < len(h.get("temperature_2m", [])) else None,
+            "precip_prob_percent": h.get("precipitation_probability", [None])[i] if i < len(h.get("precipitation_probability", [])) else None,
+            "rain_mm": h.get("rain", [None])[i] if i < len(h.get("rain", [])) else None,
         })
+
     return results
+
 
 @app.get("/health")
 async def health_check():
     """Health check endpoint"""
-    return {"status": "healthy", "service": "weather", "timestamp": datetime.now(pytz.UTC).isoformat()}
+    return {
+        "status": "healthy",
+        "service": "weather",
+        "timestamp": datetime.now(pytz.UTC).isoformat()
+    }
+
 
 @app.get("/")
 async def root():
     """Root endpoint with service information"""
     return {
         "service": "Weather API",
-        "version": "1.0.0",
-        "description": "OpenMeteo weather service for Boston traffic management",
+        "version": "1.0.1",
+        "description": "OpenMeteo weather service for Boston traffic and energy management",
         "endpoints": [
             "/weather/openmeteo_current",
             "/weather/openmeteo_forecast",
@@ -106,6 +135,7 @@ async def root():
         ]
     }
 
+
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="127.0.0.1", port=8001, reload=True)
+    uvicorn.run(app, host="127.0.0.1", port=8002)
