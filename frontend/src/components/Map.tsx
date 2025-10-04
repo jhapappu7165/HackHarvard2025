@@ -1,64 +1,97 @@
-import React, { useRef, useEffect } from 'react'
-import { useDashboardStore } from '@/store/dashboardStore'
-import mapboxgl from 'mapbox-gl'
-import 'mapbox-gl/dist/mapbox-gl.css'
+import React, { useRef, useEffect, useState } from 'react';
+import mapboxgl from 'mapbox-gl';
+import 'mapbox-gl/dist/mapbox-gl.css';
+import { useDashboardStore } from '@/store/dashboardStore';
+import MassAveSB from '../assets/MassAveSB.json';
+import MassAveNB from '../assets/MassAveNB.json';
+import { FeatureCollection, LineString, GeoJsonProperties, Point } from 'geojson';
 
-mapboxgl.accessToken = import.meta.env.VITE_MAPBOX_TOKEN as string
+mapboxgl.accessToken = import.meta.env.VITE_MAPBOX_TOKEN as string;
 
 const Map: React.FC = () => {
-  const mapContainer = useRef<HTMLDivElement>(null)
-  const map = useRef<mapboxgl.Map | null>(null)
-  const markersRef = useRef<
-    globalThis.Map<string, { marker: mapboxgl.Marker; element: HTMLDivElement }>
-  >(new globalThis.Map())
-  const hoverPopup = useRef<mapboxgl.Popup | null>(null)
-  const clickPopup = useRef<mapboxgl.Popup | null>(null)
+  const mapContainer = useRef<HTMLDivElement>(null);
+  const map = useRef<mapboxgl.Map | null>(null);
+  const markersRef = useRef<globalThis.Map<string, { marker: mapboxgl.Marker; element: HTMLDivElement }>>(new globalThis.Map());
+  const hoverPopup = useRef<mapboxgl.Popup | null>(null);
+  const clickPopup = useRef<mapboxgl.Popup | null>(null);
 
-  const { pinpoints, activeStudyCase } = useDashboardStore()
+  // Traffic volume state (0-100)
+  const [trafficVolumeNB, setTrafficVolumeNB] = useState(35); // Northbound traffic
+  const [trafficVolumeSB, setTrafficVolumeSB] = useState(68); // Southbound traffic
+
+  const { pinpoints, activeStudyCase } = useDashboardStore();
+
+  // Function to get color based on traffic volume (0-100)
+  const getTrafficColor = (volume: number): string => {
+    // Green (low traffic) to Red (high traffic)
+    // 0-33: Green
+    // 34-66: Yellow/Orange
+    // 67-100: Red
+    
+    if (volume <= 33) {
+      // Green to Yellow-Green
+      const ratio = volume / 33;
+      const r = Math.round(34 + (139 - 34) * ratio);
+      const g = Math.round(197 + (195 - 197) * ratio);
+      const b = Math.round(94 + (66 - 94) * ratio);
+      return `rgb(${r}, ${g}, ${b})`;
+    } else if (volume <= 66) {
+      // Yellow-Green to Orange
+      const ratio = (volume - 33) / 33;
+      const r = Math.round(139 + (245 - 139) * ratio);
+      const g = Math.round(195 + (158 - 195) * ratio);
+      const b = Math.round(66 + (11 - 66) * ratio);
+      return `rgb(${r}, ${g}, ${b})`;
+    } else {
+      // Orange to Red
+      const ratio = (volume - 66) / 34;
+      const r = Math.round(245 + (239 - 245) * ratio);
+      const g = Math.round(158 - 158 * ratio);
+      const b = Math.round(11 - 11 * ratio);
+      return `rgb(${r}, ${g}, ${b})`;
+    }
+  };
 
   // Initialize map only once - on mount
   useEffect(() => {
     // Prevent re-initialization if map already exists
-    if (map.current) return
+    if (map.current) return;
 
     if (!mapboxgl.supported()) {
-      console.error('Your browser does not support Mapbox GL')
-      return
+      console.error('Your browser does not support Mapbox GL');
+      return;
     }
 
     if (!mapContainer.current) {
-      console.error('Map container ref missing')
-      return
+      console.error('Map container ref missing');
+      return;
     }
 
     if (!mapboxgl.accessToken || !mapboxgl.accessToken.startsWith('pk.')) {
-      console.error('Missing or invalid Mapbox public token')
-      return
+      console.error('Missing or invalid Mapbox public token');
+      return;
     }
 
-    console.log('Initializing map...')
+    console.log('Initializing map...');
 
     // Initialize map with 3D view settings
     map.current = new mapboxgl.Map({
       container: mapContainer.current,
       style: 'mapbox://styles/mapbox/dark-v11',
-      center: [-71.0589, 42.3601],
-      zoom: 15.5,
+      center: [-71.1189, 42.3736],
+      zoom: 12,
       pitch: 60,
-      bearing: -17.6,
+      bearing: -17.5,
       antialias: true,
-    })
+    });
 
     // Add navigation controls
-    map.current.addControl(
-      new mapboxgl.NavigationControl({
-        visualizePitch: true,
-      }),
-      'top-right'
-    )
+    map.current.addControl(new mapboxgl.NavigationControl({
+      visualizePitch: true
+    }), 'top-right');
 
     map.current.on('load', () => {
-      console.info('Map loaded successfully')
+      console.info('Map loaded successfully');
 
       // Add 3D terrain
       map.current!.addSource('mapbox-dem', {
@@ -66,9 +99,9 @@ const Map: React.FC = () => {
         url: 'mapbox://mapbox.mapbox-terrain-dem-v1',
         tileSize: 512,
         maxzoom: 14,
-      })
+      });
 
-      map.current!.setTerrain({ source: 'mapbox-dem', exaggeration: 1.5 })
+      map.current!.setTerrain({ source: 'mapbox-dem', exaggeration: 1.5 });
 
       // Add sky layer
       map.current!.addLayer({
@@ -79,25 +112,21 @@ const Map: React.FC = () => {
           'sky-atmosphere-sun': [0.0, 90.0],
           'sky-atmosphere-sun-intensity': 15,
         },
-      })
-    })
+      });
+    });
 
     // Wait for style to be fully loaded before adding 3D buildings
     map.current.on('style.load', () => {
-      console.log('Style loaded, adding 3D buildings...')
+      console.log('Style loaded, adding 3D buildings...');
 
       // Find the first symbol layer to insert buildings before labels
-      const layers = map.current!.getStyle().layers
-      let labelLayerId: string | undefined
+      const layers = map.current!.getStyle().layers;
+      let labelLayerId: string | undefined;
 
       for (const layer of layers || []) {
-        if (
-          layer.type === 'symbol' &&
-          layer.layout &&
-          layer.layout['text-field']
-        ) {
-          labelLayerId = layer.id
-          break
+        if (layer.type === 'symbol' && layer.layout && layer.layout['text-field']) {
+          labelLayerId = layer.id;
+          break;
         }
       }
 
@@ -120,101 +149,106 @@ const Map: React.FC = () => {
                   'interpolate',
                   ['linear'],
                   ['get', 'height'],
-                  0,
-                  '#6b7280',
-                  50,
-                  '#4b5563',
-                  100,
-                  '#374151',
-                  200,
-                  '#1f2937',
-                ],
+                  0, '#6b7280',
+                  50, '#4b5563',
+                  100, '#374151',
+                  200, '#1f2937'
+                ]
               ],
               'fill-extrusion-height': [
                 'interpolate',
                 ['linear'],
                 ['zoom'],
-                14,
-                0,
-                14.05,
-                ['get', 'height'],
+                14, 0,
+                14.05, ['get', 'height']
               ],
               'fill-extrusion-base': [
                 'interpolate',
                 ['linear'],
                 ['zoom'],
-                14,
-                0,
-                14.05,
-                ['get', 'min_height'],
+                14, 0,
+                14.05, ['get', 'min_height']
               ],
               'fill-extrusion-opacity': 0.85,
             },
           },
           labelLayerId
-        )
-        console.log('3D buildings layer added')
+        );
+        console.log('3D buildings layer added');
       }
 
-      // Add Massachusetts Avenue highlight
-      if (!map.current!.getSource('mass-ave')) {
-        map.current!.addSource('mass-ave', {
+      // Add Mass Ave Northbound if not already added
+      if (!map.current!.getSource('mass-ave-nb')) {
+        map.current!.addSource('mass-ave-nb', {
           type: 'geojson',
-          data: {
-            type: 'Feature',
-            properties: {
-              name: 'Massachusetts Avenue',
-            },
-            geometry: {
-              type: 'LineString',
-              coordinates: [
-                [-71.1189, 42.3736],
-                [-71.115, 42.371],
-                [-71.11, 42.3685],
-                [-71.105, 42.366],
-                [-71.095, 42.3615],
-                [-71.09, 42.359],
-                [-71.085, 42.357],
-                [-71.0789, 42.355],
-              ],
-            },
-          },
-        })
+          data: MassAveNB as FeatureCollection<LineString, GeoJsonProperties>
+        });
 
+        // Glow layer for NB
         map.current!.addLayer({
-          id: 'mass-ave-glow',
+          id: 'mass-ave-nb-glow',
           type: 'line',
-          source: 'mass-ave',
-          layout: {
-            'line-join': 'round',
-            'line-cap': 'round',
-          },
+          source: 'mass-ave-nb',
+          layout: { 'line-join': 'round', 'line-cap': 'round' },
           paint: {
-            'line-color': '#fbbf24',
+            'line-color': getTrafficColor(trafficVolumeNB),
             'line-width': 8,
             'line-opacity': 0.4,
             'line-blur': 4,
           },
-        })
+        });
 
+        // Main line for NB
         map.current!.addLayer({
-          id: 'mass-ave-highlight',
+          id: 'mass-ave-nb-highlight',
           type: 'line',
-          source: 'mass-ave',
-          layout: {
-            'line-join': 'round',
-            'line-cap': 'round',
-          },
+          source: 'mass-ave-nb',
+          layout: { 'line-join': 'round', 'line-cap': 'round' },
           paint: {
-            'line-color': '#fbbf24',
+            'line-color': getTrafficColor(trafficVolumeNB),
             'line-width': 4,
             'line-opacity': 0.8,
           },
-        })
+        });
+      }
+
+      // Add Mass Ave Southbound if not already added
+      if (!map.current!.getSource('mass-ave-sb')) {
+        map.current!.addSource('mass-ave-sb', {
+          type: 'geojson',
+          data: MassAveSB as FeatureCollection<LineString, GeoJsonProperties>
+        });
+
+        // Glow layer for SB
+        map.current!.addLayer({
+          id: 'mass-ave-sb-glow',
+          type: 'line',
+          source: 'mass-ave-sb',
+          layout: { 'line-join': 'round', 'line-cap': 'round' },
+          paint: {
+            'line-color': getTrafficColor(trafficVolumeSB),
+            'line-width': 8,
+            'line-opacity': 0.4,
+            'line-blur': 4,
+          },
+        });
+
+        // Main line for SB
+        map.current!.addLayer({
+          id: 'mass-ave-sb-highlight',
+          type: 'line',
+          source: 'mass-ave-sb',
+          layout: { 'line-join': 'round', 'line-cap': 'round' },
+          paint: {
+            'line-color': getTrafficColor(trafficVolumeSB),
+            'line-width': 4,
+            'line-opacity': 0.8,
+          },
+        });
       }
 
       // Convert pinpoints to GeoJSON
-      const pinpointsGeoJSON: GeoJSON.FeatureCollection = {
+      const pinpointsGeoJSON: FeatureCollection<Point, GeoJsonProperties> = {
         type: 'FeatureCollection',
         features: pinpoints.map((pinpoint) => ({
           type: 'Feature',
@@ -228,58 +262,57 @@ const Map: React.FC = () => {
             coordinates: pinpoint.coordinates,
           },
         })),
-      }
+      };
 
       // Add pinpoints as a GeoJSON source
       if (!map.current!.getSource('pinpoints')) {
         map.current!.addSource('pinpoints', {
           type: 'geojson',
           data: pinpointsGeoJSON,
-        })
+        });
       }
 
       // Add custom HTML markers for each pinpoint (only once)
       if (markersRef.current.size === 0) {
         pinpoints.forEach((pinpoint) => {
-          const el = document.createElement('div')
-          el.className = 'custom-marker'
-          el.style.width = '40px'
-          el.style.height = '40px'
-          el.style.borderRadius = '50%'
-          el.style.cursor = 'pointer'
-          el.style.display = 'flex'
-          el.style.alignItems = 'center'
-          el.style.justifyContent = 'center'
-          el.style.fontWeight = 'bold'
-          el.style.fontSize = '18px'
-          el.style.transition = 'all 0.3s ease'
-          el.style.border = '3px solid white'
-          el.style.boxShadow = '0 4px 12px rgba(0,0,0,0.3)'
+          const el = document.createElement('div');
+          el.className = 'custom-marker';
+          el.style.width = '40px';
+          el.style.height = '40px';
+          el.style.borderRadius = '50%';
+          el.style.cursor = 'pointer';
+          el.style.display = 'flex';
+          el.style.alignItems = 'center';
+          el.style.justifyContent = 'center';
+          el.style.fontWeight = 'bold';
+          el.style.fontSize = '18px';
+          el.style.transition = 'all 0.3s ease';
+          el.style.border = '3px solid white';
+          el.style.boxShadow = '0 4px 12px rgba(0,0,0,0.3)';
 
           if (pinpoint.type === 'traffic') {
-            el.style.backgroundColor = '#ef4444'
-            el.innerHTML = '🚗'
+            el.style.backgroundColor = '#ef4444';
+            el.innerHTML = '🚗';
           } else if (pinpoint.type === 'weather') {
-            el.style.backgroundColor = '#3b82f6'
-            el.innerHTML = '🌤️'
+            el.style.backgroundColor = '#3b82f6';
+            el.innerHTML = '🌤️';
           } else if (pinpoint.type === 'energy') {
-            el.style.backgroundColor = '#22c55e'
-            el.innerHTML = '⚡'
+            el.style.backgroundColor = '#22c55e';
+            el.innerHTML = '⚡';
           }
 
           const handleClick = (e: Event) => {
-            e.stopPropagation()
-            e.preventDefault()
-            const { setActiveStudyCase: setState } =
-              useDashboardStore.getState()
-            setState(pinpoint.type)
-          }
+            e.stopPropagation();
+            e.preventDefault();
+            const { activeStudyCase: current, setActiveStudyCase: setState } = useDashboardStore.getState();
+            setState(current === pinpoint.type ? null : pinpoint.type);
+          };
 
-          el.addEventListener('click', handleClick)
+          el.addEventListener('click', handleClick);
 
           const marker = new mapboxgl.Marker({ element: el, anchor: 'center' })
             .setLngLat(pinpoint.coordinates)
-            .addTo(map.current!)
+            .addTo(map.current!);
 
           const markerPopup = new mapboxgl.Popup({
             offset: 25,
@@ -288,98 +321,83 @@ const Map: React.FC = () => {
           }).setHTML(
             `<h3 style="margin:0; font-weight:bold;">${pinpoint.name}</h3>
              <p style="margin:4px 0 0 0; text-transform:capitalize;">${pinpoint.type} Analysis</p>`
-          )
+          );
 
           el.addEventListener('mouseenter', () => {
-            markerPopup.setLngLat(pinpoint.coordinates).addTo(map.current!)
-          })
+            markerPopup.setLngLat(pinpoint.coordinates).addTo(map.current!);
+          });
 
           el.addEventListener('mouseleave', () => {
-            markerPopup.remove()
-          })
+            markerPopup.remove();
+          });
 
-          markersRef.current.set(pinpoint.id, { marker, element: el })
-        })
+          markersRef.current.set(pinpoint.id, { marker, element: el });
+        });
       }
 
       // Building interaction variables
-      let hoveredBuildingId: string | number | null = null
+      let hoveredBuildingId: string | number | null = null;
 
       // Create a popup for hover
       hoverPopup.current = new mapboxgl.Popup({
         closeButton: false,
         closeOnClick: false,
-      })
+      });
 
       // Change cursor on hover
       map.current!.on('mousemove', '3d-buildings', (e) => {
-        map.current!.getCanvas().style.cursor = 'pointer'
+        map.current!.getCanvas().style.cursor = 'pointer';
 
         if (e.features && e.features.length > 0) {
           if (hoveredBuildingId !== null) {
             map.current!.setFeatureState(
-              {
-                source: 'composite',
-                sourceLayer: 'building',
-                id: hoveredBuildingId,
-              },
+              { source: 'composite', sourceLayer: 'building', id: hoveredBuildingId },
               { hover: false }
-            )
+            );
           }
 
-          hoveredBuildingId = e.features[0].id as string | number
+          hoveredBuildingId = e.features[0].id as string | number;
 
           map.current!.setFeatureState(
-            {
-              source: 'composite',
-              sourceLayer: 'building',
-              id: hoveredBuildingId,
-            },
+            { source: 'composite', sourceLayer: 'building', id: hoveredBuildingId },
             { hover: true }
-          )
+          );
 
-          const properties = e.features[0].properties
-          const height = properties?.height || 'Unknown'
-          const name = properties?.name || 'Building'
+          const properties = e.features[0].properties;
+          const height = properties?.height || 'Unknown';
+          const name = properties?.name || 'Building';
 
-          const coordinates = e.lngLat
+          const coordinates = e.lngLat;
           const description = `
             <div style="padding: 8px;">
               <h3 style="margin:0 0 8px 0; font-weight:bold; font-size:14px;">${name}</h3>
               <p style="margin:0; font-size:12px;"><strong>Height:</strong> ${height}m</p>
               <p style="margin:4px 0 0 0; font-size:11px; color:#888;">Click for details</p>
             </div>
-          `
+          `;
 
-          hoverPopup
-            .current!.setLngLat(coordinates)
-            .setHTML(description)
-            .addTo(map.current!)
+          hoverPopup.current!.setLngLat(coordinates).setHTML(description).addTo(map.current!);
         }
-      })
+      });
 
       map.current!.on('mouseleave', '3d-buildings', () => {
-        map.current!.getCanvas().style.cursor = ''
+        map.current!.getCanvas().style.cursor = '';
 
         if (hoveredBuildingId !== null) {
           map.current!.setFeatureState(
-            {
-              source: 'composite',
-              sourceLayer: 'building',
-              id: hoveredBuildingId,
-            },
+            { source: 'composite', sourceLayer: 'building', id: hoveredBuildingId },
             { hover: false }
-          )
+          );
         }
-        hoveredBuildingId = null
-        hoverPopup.current!.remove()
-      })
+        hoveredBuildingId = null;
+        hoverPopup.current!.remove();
+      });
 
       // Handle building clicks with enhanced popup
       map.current!.on('click', '3d-buildings', (e) => {
         if (e.features && e.features.length > 0) {
-          const feature = e.features[0]
-          const properties = feature.properties
+          const feature = e.features[0];
+          const properties = feature.properties;
 
           const buildingInfo = {
             name: properties?.name || 'Unnamed Building',
@@ -387,13 +405,13 @@ const Map: React.FC = () => {
             type: properties?.type || 'Commercial',
             underground: properties?.underground || 'No',
             minHeight: properties?.min_height || 0,
-          }
+          };
 
-          console.log('Building clicked:', buildingInfo)
+          console.log('Building clicked:', buildingInfo);
 
           // Remove existing click popup if any
           if (clickPopup.current) {
-            clickPopup.current.remove()
+            clickPopup.current.remove();
           }
 
           // Create enhanced popup with close button and smaller size
@@ -403,7 +421,7 @@ const Map: React.FC = () => {
             closeOnClick: true,
             closeOnMove: false,
             maxWidth: '280px',
-            className: 'building-details-popup',
+            className: 'building-details-popup'
           })
             .setLngLat(e.lngLat)
             .setHTML(
@@ -417,7 +435,6 @@ const Map: React.FC = () => {
                     ${buildingInfo.type}
                   </p>
                 </div>
-
                 <!-- Building Metrics -->
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px;">
                   <div style="background: rgba(251, 191, 36, 0.1); padding: 8px; border-radius: 4px; border-left: 2px solid #fbbf24;">
@@ -429,7 +446,6 @@ const Map: React.FC = () => {
                     <p style="margin:2px 0 0 0; font-size:14px; font-weight:600; color: #22c55e;">87.3%</p>
                   </div>
                 </div>
-
                 <!-- Quick Stats -->
                 <div style="font-size:11px; color: #d1d5db; margin-bottom: 12px;">
                   <div style="display: flex; justify-content: space-between; padding: 4px 0;">
@@ -441,7 +457,6 @@ const Map: React.FC = () => {
                     <strong style="color: #f59e0b;">48.2 tons/yr</strong>
                   </div>
                 </div>
-
                 <!-- Action Button -->
                 <button 
                   onclick="console.log('View analytics for: ${buildingInfo.name}')" 
@@ -453,76 +468,97 @@ const Map: React.FC = () => {
                 </button>
               </div>`
             )
-            .addTo(map.current!)
+            .addTo(map.current!);
 
           // Listen for popup close
           clickPopup.current.on('close', () => {
             // Popup closed
-          })
+          });
         }
-      })
+      });
 
       // Add click listener to close popup when clicking on map (but not on buildings)
       map.current!.on('click', (e) => {
         // Check if click was on a building
         const features = map.current!.queryRenderedFeatures(e.point, {
-          layers: ['3d-buildings'],
-        })
+          layers: ['3d-buildings']
+        });
 
         // If no building was clicked and there's an open popup, close it
         if (features.length === 0 && clickPopup.current) {
-          clickPopup.current.remove()
+          clickPopup.current.remove();
         }
-      })
-    })
+      });
+    });
 
     map.current.on('error', (_e) => {
       // Handle map error
-    })
+    });
 
     // Store references for cleanup
-    const markersForCleanup = markersRef.current
-    const hoverPopupForCleanup = hoverPopup.current
-    const clickPopupForCleanup = clickPopup.current
+    const markersForCleanup = markersRef.current;
+    const hoverPopupForCleanup = hoverPopup.current;
+    const clickPopupForCleanup = clickPopup.current;
 
     return () => {
       // Clean up with stored references
-      markersForCleanup.forEach(({ marker }) => marker.remove())
-      markersForCleanup.clear()
+      markersForCleanup.forEach(({ marker }) => marker.remove());
+      markersForCleanup.clear();
       if (hoverPopupForCleanup) {
-        hoverPopupForCleanup.remove()
+        hoverPopupForCleanup.remove();
       }
       if (clickPopupForCleanup) {
-        clickPopupForCleanup.remove()
+        clickPopupForCleanup.remove();
       }
       if (map.current) {
-        map.current.remove()
-        map.current = null
+        map.current.remove();
+        map.current = null;
       }
+    };
+  }, [pinpoints]);
+
+  // Update road colors when traffic volume changes
+  useEffect(() => {
+    if (!map.current) return;
+
+    // Update Northbound colors
+    if (map.current.getLayer('mass-ave-nb-glow')) {
+      map.current.setPaintProperty('mass-ave-nb-glow', 'line-color', getTrafficColor(trafficVolumeNB));
     }
-  }, [pinpoints])
+    if (map.current.getLayer('mass-ave-nb-highlight')) {
+      map.current.setPaintProperty('mass-ave-nb-highlight', 'line-color', getTrafficColor(trafficVolumeNB));
+    }
+
+    // Update Southbound colors
+    if (map.current.getLayer('mass-ave-sb-glow')) {
+      map.current.setPaintProperty('mass-ave-sb-glow', 'line-color', getTrafficColor(trafficVolumeSB));
+    }
+    if (map.current.getLayer('mass-ave-sb-highlight')) {
+      map.current.setPaintProperty('mass-ave-sb-highlight', 'line-color', getTrafficColor(trafficVolumeSB));
+    }
+  }, [trafficVolumeNB, trafficVolumeSB]);
 
   // Update marker styles when active study case changes
   useEffect(() => {
-    if (!map.current) return
+    if (!map.current) return;
 
     pinpoints.forEach((pinpoint) => {
-      const markerData = markersRef.current.get(pinpoint.id)
-      if (!markerData) return
+      const markerData = markersRef.current.get(pinpoint.id);
+      if (!markerData) return;
 
-      const { element } = markerData
+      const { element } = markerData;
 
       if (activeStudyCase === pinpoint.type) {
-        element.style.transform = 'scale(1.3)'
-        element.style.boxShadow = '0 6px 20px rgba(255,255,255,0.5)'
-        element.style.zIndex = '1000'
+        element.style.transform = 'scale(1.3)';
+        element.style.boxShadow = '0 6px 20px rgba(255,255,255,0.5)';
+        element.style.zIndex = '1000';
       } else {
-        element.style.transform = 'scale(1)'
-        element.style.boxShadow = '0 4px 12px rgba(0,0,0,0.3)'
-        element.style.zIndex = '1'
+        element.style.transform = 'scale(1)';
+        element.style.boxShadow = '0 4px 12px rgba(0,0,0,0.3)';
+        element.style.zIndex = '1';
       }
-    })
-  }, [activeStudyCase, pinpoints])
+    });
+  }, [activeStudyCase, pinpoints]);
 
   return (
     <div
@@ -532,9 +568,9 @@ const Map: React.FC = () => {
         height: 400,
         borderRadius: '8px',
       }}
-      className='map-container'
+      className="map-container"
     />
-  )
-}
+  );
+};
 
-export default Map
+export default Map;
