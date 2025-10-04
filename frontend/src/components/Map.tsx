@@ -9,7 +9,8 @@ const Map: React.FC = () => {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<mapboxgl.Map | null>(null);
   const markersRef = useRef<globalThis.Map<string, { marker: mapboxgl.Marker; element: HTMLDivElement }>>(new globalThis.Map());
-  const popup = useRef<mapboxgl.Popup | null>(null);
+  const hoverPopup = useRef<mapboxgl.Popup | null>(null);
+  const clickPopup = useRef<mapboxgl.Popup | null>(null);
   
   const { pinpoints, activeStudyCase } = useDashboardStore();
 
@@ -40,7 +41,7 @@ const Map: React.FC = () => {
       container: mapContainer.current,
       style: 'mapbox://styles/mapbox/dark-v11',
       center: [-71.0589, 42.3601],
-      zoom: 15.5, // Increased zoom to see buildings better
+      zoom: 15.5,
       pitch: 60,
       bearing: -17.6,
       antialias: true,
@@ -105,7 +106,7 @@ const Map: React.FC = () => {
               'fill-extrusion-color': [
                 'case',
                 ['boolean', ['feature-state', 'hover'], false],
-                '#fbbf24', // Yellow/amber when hovered
+                '#fbbf24',
                 [
                   'interpolate',
                   ['linear'],
@@ -286,8 +287,8 @@ const Map: React.FC = () => {
       // Building interaction variables
       let hoveredBuildingId: string | number | null = null;
 
-      // Create a popup for buildings
-      popup.current = new mapboxgl.Popup({
+      // Create a popup for hover
+      hoverPopup.current = new mapboxgl.Popup({
         closeButton: false,
         closeOnClick: false,
       });
@@ -324,7 +325,7 @@ const Map: React.FC = () => {
             </div>
           `;
 
-          popup.current!.setLngLat(coordinates).setHTML(description).addTo(map.current!);
+          hoverPopup.current!.setLngLat(coordinates).setHTML(description).addTo(map.current!);
         }
       });
 
@@ -338,9 +339,10 @@ const Map: React.FC = () => {
           );
         }
         hoveredBuildingId = null;
-        popup.current!.remove();
+        hoverPopup.current!.remove();
       });
 
+      // Handle building clicks with enhanced popup
       map.current!.on('click', '3d-buildings', (e) => {
         if (e.features && e.features.length > 0) {
           const feature = e.features[0];
@@ -348,57 +350,124 @@ const Map: React.FC = () => {
           
           const buildingInfo = {
             name: properties?.name || 'Unnamed Building',
-            height: properties?.height || 'Unknown',
-            type: properties?.type || 'Building',
+            height: properties?.height || 'N/A',
+            type: properties?.type || 'Commercial',
             underground: properties?.underground || 'No',
             minHeight: properties?.min_height || 0,
           };
 
           console.log('Building clicked:', buildingInfo);
 
-          const detailedPopup = new mapboxgl.Popup({ offset: 25 })
+          // Remove existing click popup if any
+          if (clickPopup.current) {
+            clickPopup.current.remove();
+          }
+
+          // Create enhanced popup with close button and smaller size
+          clickPopup.current = new mapboxgl.Popup({ 
+            offset: 25,
+            closeButton: true,
+            closeOnClick: true,
+            closeOnMove: false,
+            maxWidth: '280px',
+            className: 'building-details-popup'
+          })
             .setLngLat(e.lngLat)
             .setHTML(
-              `<div style="padding: 12px; min-width: 200px;">
-                <h3 style="margin:0 0 12px 0; font-weight:bold; font-size:16px; border-bottom: 2px solid #fbbf24; padding-bottom: 8px;">
-                  ${buildingInfo.name}
-                </h3>
-                <div style="font-size:13px; line-height: 1.8;">
-                  <p style="margin:4px 0;"><strong>Type:</strong> ${buildingInfo.type}</p>
-                  <p style="margin:4px 0;"><strong>Height:</strong> ${buildingInfo.height}m</p>
-                  <p style="margin:4px 0;"><strong>Base Height:</strong> ${buildingInfo.minHeight}m</p>
-                  <p style="margin:4px 0;"><strong>Underground:</strong> ${buildingInfo.underground}</p>
+              `<div style="padding: 12px; font-family: system-ui, -apple-system, sans-serif;">
+                <!-- Header -->
+                <div style="border-bottom: 1px solid #fbbf24; padding-bottom: 8px; margin-bottom: 12px;">
+                  <h3 style="margin:0; font-weight:600; font-size:16px; color: #fff;">
+                    ${buildingInfo.name}
+                  </h3>
+                  <p style="margin:2px 0 0 0; font-size:11px; color: #9ca3af;">
+                    ${buildingInfo.type}
+                  </p>
                 </div>
+
+                <!-- Building Metrics -->
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px;">
+                  <div style="background: rgba(251, 191, 36, 0.1); padding: 8px; border-radius: 4px; border-left: 2px solid #fbbf24;">
+                    <p style="margin:0; font-size:10px; color: #9ca3af; text-transform: uppercase;">Height</p>
+                    <p style="margin:2px 0 0 0; font-size:14px; font-weight:600; color: #fbbf24;">${buildingInfo.height}m</p>
+                  </div>
+                  <div style="background: rgba(34, 197, 94, 0.1); padding: 8px; border-radius: 4px; border-left: 2px solid #22c55e;">
+                    <p style="margin:0; font-size:10px; color: #9ca3af; text-transform: uppercase;">Energy</p>
+                    <p style="margin:2px 0 0 0; font-size:14px; font-weight:600; color: #22c55e;">87.3%</p>
+                  </div>
+                </div>
+
+                <!-- Quick Stats -->
+                <div style="font-size:11px; color: #d1d5db; margin-bottom: 12px;">
+                  <div style="display: flex; justify-content: space-between; padding: 4px 0;">
+                    <span>Consumption:</span>
+                    <strong style="color: #22c55e;">124.5 MWh/yr</strong>
+                  </div>
+                  <div style="display: flex; justify-content: space-between; padding: 4px 0;">
+                    <span>CO₂ Emissions:</span>
+                    <strong style="color: #f59e0b;">48.2 tons/yr</strong>
+                  </div>
+                </div>
+
+                <!-- Action Button -->
                 <button 
-                  onclick="alert('Navigate to building details')" 
-                  style="margin-top:12px; width:100%; padding:8px; background:#fbbf24; border:none; border-radius:4px; cursor:pointer; font-weight:bold;"
+                  onclick="console.log('View analytics for: ${buildingInfo.name}')" 
+                  style="width: 100%; padding: 8px; background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%); color: #000; border: none; border-radius: 4px; cursor: pointer; font-weight: 600; font-size: 12px; transition: transform 0.2s;"
+                  onmouseover="this.style.transform='scale(1.02)'"
+                  onmouseout="this.style.transform='scale(1)'"
                 >
                   View Details
                 </button>
               </div>`
             )
             .addTo(map.current!);
+
+          // Listen for popup close
+          clickPopup.current.on('close', () => {
+            // Popup closed
+          });
+        }
+      });
+
+      // Add click listener to close popup when clicking on map (but not on buildings)
+      map.current!.on('click', (e) => {
+        // Check if click was on a building
+        const features = map.current!.queryRenderedFeatures(e.point, {
+          layers: ['3d-buildings']
+        });
+        
+        // If no building was clicked and there's an open popup, close it
+        if (features.length === 0 && clickPopup.current) {
+          clickPopup.current.remove();
         }
       });
     });
 
-    map.current.on('error', (e) => {
-      console.error('Mapbox map error event:', e.error);
+    map.current.on('error', (_e) => {
+      // Handle map error
     });
 
+    // Store references for cleanup
+    const markersForCleanup = markersRef.current;
+    const hoverPopupForCleanup = hoverPopup.current;
+    const clickPopupForCleanup = clickPopup.current;
+
     return () => {
-      console.log('Cleaning up map...');
-      markersRef.current.forEach(({ marker }) => marker.remove());
-      markersRef.current.clear();
-      if (popup.current) {
-        popup.current.remove();
+      // Clean up with stored references
+      markersForCleanup.forEach(({ marker }) => marker.remove());
+      markersForCleanup.clear();
+      if (hoverPopupForCleanup) {
+        hoverPopupForCleanup.remove();
+      }
+      if (clickPopupForCleanup) {
+        clickPopupForCleanup.remove();
       }
       if (map.current) {
         map.current.remove();
         map.current = null;
       }
     };
-  }, []);
+  }, [pinpoints]);
 
   // Update marker styles when active study case changes
   useEffect(() => {
