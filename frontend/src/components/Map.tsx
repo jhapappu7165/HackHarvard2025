@@ -149,15 +149,15 @@ export function Map() {
           }).setHTML(
             `
             <div style="padding: 8px; font-family: system-ui, -apple-system, sans-serif;">
-              <h3 style="font-weight: bold; font-size: 14px; margin-bottom: 4px; color: #1a1a1a;">${building.name}</h3>
-              <p style="font-size: 12px; color: #666; margin-bottom: 2px;">${building.category}</p>
-              <p style="font-size: 12px; color: #333;">${building.square_feet.toLocaleString()} sq ft</p>
+              <h3 style="font-weight: bold; font-size: 14px; margin-bottom: 4px; color: #1a1a1a;">${building.name || 'Unknown Building'}</h3>
+              <p style="font-size: 12px; color: #666; margin-bottom: 2px;">${building.category || 'Unknown Category'}</p>
+              <p style="font-size: 12px; color: #333;">${building.square_feet ? building.square_feet.toLocaleString() : 'N/A'} sq ft</p>
             </div>
             `
           );
 
           const marker = new mapboxgl.Marker(el)
-            .setLngLat([building.longitude, building.latitude])
+            .setLngLat([building.longitude || 0, building.latitude || 0])
             .setPopup(popup)
             .addTo(map.current!);
 
@@ -187,14 +187,14 @@ export function Map() {
           }).setHTML(
             `
             <div style="padding: 8px; font-family: system-ui, -apple-system, sans-serif;">
-              <h3 style="font-weight: bold; font-size: 14px; margin-bottom: 4px; color: #1a1a1a;">${station.name}</h3>
+              <h3 style="font-weight: bold; font-size: 14px; margin-bottom: 4px; color: #1a1a1a;">${station.name || 'Unknown Station'}</h3>
               <p style="font-size: 12px; color: #666;">Weather Station</p>
             </div>
             `
           );
 
           const marker = new mapboxgl.Marker(el)
-            .setLngLat([station.longitude, station.latitude])
+            .setLngLat([station.longitude || 0, station.latitude || 0])
             .setPopup(popup)
             .addTo(map.current!);
 
@@ -224,14 +224,14 @@ export function Map() {
           }).setHTML(
             `
             <div style="padding: 8px; font-family: system-ui, -apple-system, sans-serif;">
-              <h3 style="font-weight: bold; font-size: 14px; margin-bottom: 4px; color: #1a1a1a;">${intersection.name}</h3>
+              <h3 style="font-weight: bold; font-size: 14px; margin-bottom: 4px; color: #1a1a1a;">${intersection.name || 'Unknown Intersection'}</h3>
               <p style="font-size: 12px; color: #666;">Traffic Intersection</p>
             </div>
             `
           );
 
           const marker = new mapboxgl.Marker(el)
-            .setLngLat([intersection.longitude, intersection.latitude])
+            .setLngLat([intersection.longitude || 0, intersection.latitude || 0])
             .setPopup(popup)
             .addTo(map.current!);
 
@@ -246,7 +246,9 @@ export function Map() {
     if (mapData.buildings && mapData.buildings.length > 0) {
       const bounds = new mapboxgl.LngLatBounds();
       mapData.buildings.forEach(building => {
-        bounds.extend([building.longitude, building.latitude]);
+        if (building.longitude && building.latitude) {
+          bounds.extend([building.longitude, building.latitude]);
+        }
       });
       map.current?.fitBounds(bounds, { padding: 50, maxZoom: 14, duration: 1000 });
     }

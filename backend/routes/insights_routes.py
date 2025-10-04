@@ -213,14 +213,15 @@ def generate_city_optimization_suggestions():
         import json
         
         # Configure Gemini API
-        api_key = os.getenv('GEMINI_API_KEY')
+        from config import Config
+        api_key = Config.GEMINI_API_KEY
         if not api_key:
             return jsonify({'success': False, 'error': 'GEMINI_API_KEY not configured'}), 500
         
         # Try to use Gemini API, fallback to mock data if it fails
         try:
             genai.configure(api_key=api_key)
-            model = genai.GenerativeModel('gemini-pro')
+            model = genai.GenerativeModel('gemini-2.5-flash')
             use_gemini = True
         except Exception as e:
             logger.warning(f"Gemini API not available, using mock data: {str(e)}")
