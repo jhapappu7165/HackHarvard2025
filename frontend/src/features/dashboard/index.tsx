@@ -168,7 +168,7 @@ export function Dashboard() {
                   <CardTitle>Overview</CardTitle>
                 </CardHeader>
                 <CardContent className='ps-2'>
-                  <Overview />
+                  {/* PUT map component HERE */}
                 </CardContent>
               </Card>
               <Card className='col-span-1 lg:col-span-3'>
