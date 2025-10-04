@@ -1,9 +1,23 @@
 from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 import httpx
 from datetime import datetime
 import pytz
 
-app = FastAPI(title="Weather (OpenMeteo) Service")
+app = FastAPI(
+    title="Weather (OpenMeteo) Service",
+    description="Weather API service for Boston traffic management",
+    version="1.0.0"
+)
+
+# Configure CORS
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # In production, replace with specific domains
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # Boston lat/lon
 LAT = 42.3601
@@ -66,9 +80,32 @@ async def get_forecast_openmeteo():
     for i, t in enumerate(times):
         results.append({
             "timestamp": t,
-            "temperature_c": temps[i],
-            "rain_prob": precip_probs[i],
-            "wind_speed": wind_speeds[i],
-            "weathercode": weathercodes[i]
+            "temperature_c": temps[i] if i < len(temps) else None,
+            "rain_prob": precip_probs[i] if i < len(precip_probs) else None,
+            "wind_speed": wind_speeds[i] if i < len(wind_speeds) else None,
+            "weathercode": weathercodes[i] if i < len(weathercodes) else None
         })
     return results
+
+@app.get("/health")
+async def health_check():
+    """Health check endpoint"""
+    return {"status": "healthy", "service": "weather", "timestamp": datetime.now(pytz.UTC).isoformat()}
+
+@app.get("/")
+async def root():
+    """Root endpoint with service information"""
+    return {
+        "service": "Weather API",
+        "version": "1.0.0",
+        "description": "OpenMeteo weather service for Boston traffic management",
+        "endpoints": [
+            "/weather/openmeteo_current",
+            "/weather/openmeteo_forecast",
+            "/health"
+        ]
+    }
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="127.0.0.1", port=8001, reload=True)
