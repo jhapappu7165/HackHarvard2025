@@ -141,9 +141,13 @@ const Map: React.FC = () => {
     if (!mapboxgl.supported()) {
       console.error('Your browser does not support Mapbox GL');
       return;
+      console.error('Your browser does not support Mapbox GL');
+      return;
     }
 
     if (!mapContainer.current) {
+      console.error('Map container ref missing');
+      return;
       console.error('Map container ref missing');
       return;
     }
@@ -151,8 +155,11 @@ const Map: React.FC = () => {
     if (!mapboxgl.accessToken || !mapboxgl.accessToken.startsWith('pk.')) {
       console.error('Missing or invalid Mapbox public token');
       return;
+      console.error('Missing or invalid Mapbox public token');
+      return;
     }
 
+    console.log('Initializing map...');
     console.log('Initializing map...');
 
     map.current = new mapboxgl.Map({
@@ -160,7 +167,10 @@ const Map: React.FC = () => {
       style: 'mapbox://styles/mapbox/dark-v11',
       center: [-71.1189, 42.3736],
       zoom: 12,
+      center: [-71.1189, 42.3736],
+      zoom: 12,
       pitch: 60,
+      bearing: -17.5,
       bearing: -17.5,
       antialias: true,
     });
@@ -171,6 +181,7 @@ const Map: React.FC = () => {
 
     map.current.on('load', () => {
       console.info('Map loaded successfully');
+      console.info('Map loaded successfully');
 
       map.current!.addSource('mapbox-dem', {
         type: 'raster-dem',
@@ -178,7 +189,9 @@ const Map: React.FC = () => {
         tileSize: 512,
         maxzoom: 14,
       });
+      });
 
+      map.current!.setTerrain({ source: 'mapbox-dem', exaggeration: 1.5 });
       map.current!.setTerrain({ source: 'mapbox-dem', exaggeration: 1.5 });
 
       map.current!.addLayer({
@@ -191,14 +204,20 @@ const Map: React.FC = () => {
         },
       });
     });
+      });
+    });
 
     map.current.on('style.load', () => {
+      console.log('Style loaded, adding 3D buildings...');
       console.log('Style loaded, adding 3D buildings...');
 
       const layers = map.current!.getStyle().layers;
       let labelLayerId: string | undefined;
 
       for (const layer of layers || []) {
+        if (layer.type === 'symbol' && layer.layout && layer.layout['text-field']) {
+          labelLayerId = layer.id;
+          break;
         if (layer.type === 'symbol' && layer.layout && layer.layout['text-field']) {
           labelLayerId = layer.id;
           break;
@@ -228,11 +247,18 @@ const Map: React.FC = () => {
                   100, '#374151',
                   200, '#1f2937'
                 ]
+                  0, '#6b7280',
+                  50, '#4b5563',
+                  100, '#374151',
+                  200, '#1f2937'
+                ]
               ],
               'fill-extrusion-height': [
                 'interpolate',
                 ['linear'],
                 ['zoom'],
+                14, 0,
+                14.05, ['get', 'height']
                 14, 0,
                 14.05, ['get', 'height']
               ],
@@ -242,11 +268,15 @@ const Map: React.FC = () => {
                 ['zoom'],
                 14, 0,
                 14.05, ['get', 'min_height']
+                14, 0,
+                14.05, ['get', 'min_height']
               ],
               'fill-extrusion-opacity': 0.85,
             },
           },
           labelLayerId
+        );
+        console.log('3D buildings layer added');
         );
         console.log('3D buildings layer added');
       }
@@ -433,12 +463,12 @@ const Map: React.FC = () => {
             .setLngLat(pinpoint.coordinates)
             .addTo(map.current!);
 
-          const markerPopup = new mapboxgl.Popup({
-            offset: 25,
-            closeButton: false,
-            closeOnClick: false,
-          }).setHTML(
-            `<h3 style="margin:0; font-weight:bold;">${pinpoint.name}</h3>
+        const markerPopup = new mapboxgl.Popup({
+          offset: 25,
+          closeButton: false,
+          closeOnClick: false,
+        }).setHTML(
+          `<h3 style="margin:0; font-weight:bold;">${pinpoint.name}</h3>
              <p style="margin:4px 0 0 0; text-transform:capitalize;">${pinpoint.type} Analysis</p>`
           );
 
@@ -490,6 +520,7 @@ const Map: React.FC = () => {
               <p style="margin:0; font-size:12px;"><strong>Height:</strong> ${height}m</p>
               <p style="margin:4px 0 0 0; font-size:11px; color:#888;">Click for details</p>
             </div>
+          `;
           `;
 
           hoverPopup.current!.setLngLat(coordinates).setHTML(description).addTo(map.current!);
@@ -678,4 +709,5 @@ const Map: React.FC = () => {
   );
 };
 
+export default Map;
 export default Map;
