@@ -30,7 +30,6 @@ interface DashboardState {
   insights: Insight[];
   stats: DashboardStats | null;
   mapData: MapData | null;
-  pinpoints: PinpointLocation[];
   
   // Actions
   setActiveStudyCase: (studyCase: StudyCase | null) => void;
@@ -41,6 +40,7 @@ interface DashboardState {
   generateAllData: () => Promise<void>;
   initializeDashboard: () => Promise<void>;
 }
+
 export const useDashboardStore = create<DashboardState>((set, get) => ({
   // Initial state
   activeStudyCase: 'energy',
@@ -50,7 +50,6 @@ export const useDashboardStore = create<DashboardState>((set, get) => ({
   insights: [],
   stats: null,
   mapData: null,
-  pinpoints: [],
 
   // Actions
   setActiveStudyCase: (studyCase) => set({ activeStudyCase: studyCase }),
@@ -66,13 +65,14 @@ export const useDashboardStore = create<DashboardState>((set, get) => ({
     }
   },
 
-  fetchInsights: async (params?: { priority?: string }) => {
+  fetchInsights: async (params) => {
     try {
       set({ loading: true, error: null });
-      const response = await api.insights.getAll(params);
-      set({ insights: response.insights, loading: false });
+      // Use the new AI-powered city suggestions instead of old hardcoded insights
+      const response = await api.insights.getCitySuggestions();
+      set({ insights: response.suggestions, loading: false });
     } catch (error) {
-      console.error('Error fetching insights:', error);
+      console.error('Error fetching AI suggestions:', error);
       set({ error: (error as Error).message, loading: false });
     }
   },
