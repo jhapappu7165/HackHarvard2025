@@ -54,7 +54,12 @@ export function AnalysisPanel() {
             <p className="text-sm">Generate data to see AI-powered recommendations.</p>
           </div>
         ) : (
-          insights.slice(0, 5).map((insight) => {
+          insights
+            .sort((a, b) => {
+              const priorityOrder = { high: 0, medium: 1, low: 2 };
+              return priorityOrder[a.priority] - priorityOrder[b.priority];
+            })
+            .slice(0, 5).map((insight) => {
             const Icon = priorityIcons[insight.priority];
             return (
               <div
@@ -71,7 +76,7 @@ export function AnalysisPanel() {
                       {insight.priority}
                     </Badge>
                   </div>
-                  <p className="text-sm text-muted-foreground">{insight.description}</p>
+                  <p className="text-sm text-muted-foreground">{insight.why}</p>
                   <div className="flex items-center gap-4 text-xs text-muted-foreground">
                     {insight.category && (
                       <span className="flex items-center gap-1">

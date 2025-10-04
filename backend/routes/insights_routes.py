@@ -266,10 +266,10 @@ def generate_city_optimization_suggestions():
         
         # Create detailed prompt for Gemini
         prompt = f"""
-You are an expert smart city consultant analyzing Boston's municipal energy consumption and traffic patterns to provide data-driven optimization suggestions.
+You are an expert smart city consultant analyzing Boston's municipal energy consumption and traffic patterns to identify problems that need attention.
 
 ANALYSIS CONTEXT:
-You are analyzing real data from Boston's municipal infrastructure to provide actionable recommendations for city-wide optimization.
+You are analyzing real data from Boston's municipal infrastructure to identify problems that need the city government's attention.
 
 CITY DATA SUMMARY:
 - Total Municipal Buildings: {total_buildings}
@@ -286,35 +286,34 @@ BUILDING PORTFOLIO:
 {json.dumps([b.get('category', 'Unknown') for b in buildings[:10]], indent=2)}
 
 ANALYSIS REQUIREMENTS:
-Analyze the relationship between energy consumption patterns and traffic flow data to identify optimization opportunities. Consider:
+Analyze the relationship between energy consumption patterns and traffic flow data to identify PROBLEMS that need attention. Focus on:
 
-1. Energy efficiency improvements that could reduce municipal energy costs
-2. Traffic flow optimizations that could reduce congestion and emissions
-3. Cross-sector integration opportunities where energy and traffic systems can work together
-4. Infrastructure investments with the highest ROI
-5. Policy changes that could drive behavioral improvements
-6. Technology implementations that leverage the available data
+1. Energy consumption problems that are costing the city money
+2. Traffic flow problems that are causing congestion and inefficiencies
+3. Cross-sector problems where energy and traffic systems are not working together
+4. Infrastructure problems that need attention
+5. Policy gaps that are causing issues
+6. Data patterns that reveal underlying problems
 
 RESPONSE FORMAT REQUIREMENTS:
-Generate 3-5 specific, actionable suggestions. Each suggestion must follow this exact structure:
+Generate 3-5 specific problem identifications. Each problem must follow this exact structure:
 
-- "instruction": Provide a clear, actionable instruction in 1-2 lines maximum. This should be what the city should DO.
-- "why": Provide a detailed explanation of WHY this instruction is recommended, including specific data points from the analysis above. Reference actual numbers, patterns, and correlations you observe in the data.
+- "title": Should describe WHAT THE PROBLEM IS in a clear, specific way. Be SPECIFIC to particular buildings, locations, or intersections. Keep it to ONE LINE maximum.
+- "why": Provide a concise one-line explanation of WHY this is a problem, focusing on the data evidence or impact.
 
 CRITICAL INSTRUCTIONS:
-1. Base ALL recommendations on the actual data provided above
-2. Reference specific numbers, percentages, and data points in your "why" explanations
-3. Make the "instruction" field concise and actionable (1-2 lines max)
-4. Make the "why" field detailed and data-driven
-5. Ensure suggestions are realistic and implementable for a municipal government
-6. Focus on measurable outcomes and cost-benefit analysis
+1. Base ALL problem identifications on the actual data provided above
+2. Make the "title" field describe the PROBLEM clearly and be LOCATION-SPECIFIC (mention specific buildings, schools, intersections, or areas)
+3. Make the "why" field exactly one line explaining why this is a problem based on the data
+4. Focus on problems that are evident from the data patterns
+5. Do NOT provide solutions - only identify problems
+6. ORDER problems by priority: all HIGH priority first, then MEDIUM, then LOW
 
 Return your response as a JSON array with this exact structure:
 [
     {{
-        "title": "Brief suggestion title (max 8 words)",
-        "instruction": "Clear, actionable instruction in 1-2 lines maximum",
-        "why": "Detailed explanation of why this instruction is provided, including specific data-driven reasoning with actual numbers from the analysis",
+        "title": "[Problem Description] at [Specific Location/Building]",
+        "why": "One-line explanation of why this is a problem based on data evidence",
         "category": "Energy" or "Traffic" or "Cross-Sector",
         "priority": "high" or "medium" or "low",
         "estimated_impact": "Brief description of expected impact",
