@@ -80,6 +80,42 @@ def get_traffic_data():
         logger.error(f"Error fetching traffic data: {str(e)}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
+@traffic_bp.route('/directional', methods=['GET'])
+def get_directional_data():
+    """Get directional traffic data (northbound/southbound with left/thru/right counts)"""
+    try:
+        intersection_id = request.args.get('intersection_id')
+        start_time = request.args.get('start_time')
+        end_time = request.args.get('end_time')
+        limit = int(request.args.get('limit', 100))
+        
+        if not intersection_id:
+            return jsonify({
+                'success': False,
+                'error': 'intersection_id is required'
+            }), 400
+        
+        query = db.get_client().table('traffic_data')\
+            .select('*')\
+            .eq('intersection_id', int(intersection_id))
+        
+        if start_time:
+            query = query.gte('reading_timestamp', start_time)
+        if end_time:
+            query = query.lte('reading_timestamp', end_time)
+        
+        response = query.limit(limit).order('reading_timestamp').execute()
+        
+        return jsonify({
+            'success': True,
+            'count': len(response.data),
+            'data': response.data
+        }), 200
+        
+    except Exception as e:
+        logger.error(f"Error fetching directional data: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
 @traffic_bp.route('/intersections/<int:intersection_id>/data', methods=['GET'])
 def get_intersection_data(intersection_id):
     """Get traffic data for specific intersection"""

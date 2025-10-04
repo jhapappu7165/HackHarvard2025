@@ -66,13 +66,13 @@ class TrafficDataGenerator:
         logger.info(f"Generated {len(all_traffic_data)} total traffic readings")
         return all_traffic_data
     
-    def _generate_traffic_data_for_intersection(self, intersection: Dict) -> List[Dict]:
-        """Generate traffic data for a single intersection"""
+    def _generate_traffic_data_for_intersection(self, intersection: dict) -> list[dict]:
+        """Generate traffic data for a single intersection with directional counts"""
         traffic_data = []
         
         # Generate hourly readings for the past 30 days
         end_date = datetime.now()
-        start_date = end_date - timedelta(days=30)
+        start_date = end_date - timedelta(days=1)
         dates = generate_date_range(start_date, end_date, freq='H')
         
         for timestamp in dates:
@@ -81,21 +81,54 @@ class TrafficDataGenerator:
             # Determine time period and traffic characteristics
             time_period, base_vehicles, base_speed = self._get_traffic_characteristics(hour)
             
-            # Add randomness
-            vehicle_count = int(base_vehicles + random.uniform(-base_vehicles * 0.3, base_vehicles * 0.3))
-            vehicle_count = max(0, vehicle_count)
+            # Generate directional counts based on base vehicles
+            # Distribute traffic across directions with realistic patterns
             
+            # Northbound traffic (typically heavier in morning)
+            nb_multiplier = 1.2 if time_period == 'morning_peak' else 0.8 if time_period == 'afternoon_peak' else 1.0
+            
+            # Southbound traffic (typically heavier in afternoon)
+            sb_multiplier = 0.8 if time_period == 'morning_peak' else 1.2 if time_period == 'afternoon_peak' else 1.0
+            
+            # Generate counts for each movement with randomness
+            northbound_left = int((base_vehicles * 0.15 * nb_multiplier) + random.uniform(-10, 10))
+            northbound_thru = int((base_vehicles * 0.50 * nb_multiplier) + random.uniform(-20, 20))
+            northbound_right = int((base_vehicles * 0.10 * nb_multiplier) + random.uniform(-5, 5))
+            
+            southbound_left = int((base_vehicles * 0.10 * sb_multiplier) + random.uniform(-5, 5))
+            southbound_thru = int((base_vehicles * 0.50 * sb_multiplier) + random.uniform(-20, 20))
+            southbound_right = int((base_vehicles * 0.15 * sb_multiplier) + random.uniform(-10, 10))
+            
+            # Ensure non-negative values
+            northbound_left = max(0, northbound_left)
+            northbound_thru = max(0, northbound_thru)
+            northbound_right = max(0, northbound_right)
+            southbound_left = max(0, southbound_left)
+            southbound_thru = max(0, southbound_thru)
+            southbound_right = max(0, southbound_right)
+            
+            # Calculate total
+            total_vehicles = (northbound_left + northbound_thru + northbound_right + 
+                             southbound_left + southbound_thru + southbound_right)
+            
+            # Generate speed with randomness
             avg_speed = base_speed + random.uniform(-5, 5)
             avg_speed = max(5, min(50, avg_speed))  # Clamp between 5-50 mph
             
             # Determine congestion level
-            congestion_level = self._determine_congestion_level(vehicle_count, avg_speed)
+            congestion_level = self._determine_congestion_level(total_vehicles, avg_speed)
             
             traffic_reading = TrafficData(
                 intersection_id=intersection['id'],
                 reading_timestamp=timestamp.isoformat(),
                 time_period=time_period,
-                total_vehicle_count=vehicle_count,
+                northbound_left=northbound_left,
+                northbound_thru=northbound_thru,
+                northbound_right=northbound_right,
+                southbound_left=southbound_left,
+                southbound_thru=southbound_thru,
+                southbound_right=southbound_right,
+                total_vehicle_count=total_vehicles,
                 average_speed=round(avg_speed, 2),
                 congestion_level=congestion_level
             )

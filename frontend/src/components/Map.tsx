@@ -8,42 +8,124 @@ import { FeatureCollection, LineString, GeoJsonProperties, Point } from 'geojson
 
 mapboxgl.accessToken = import.meta.env.VITE_MAPBOX_TOKEN as string;
 
+interface TrafficDataPoint {
+  id: number;
+  intersection_id: number;
+  reading_timestamp: string;
+  northbound_left: number;
+  northbound_thru: number;
+  northbound_right: number;
+  southbound_left: number;
+  southbound_thru: number;
+  southbound_right: number;
+  total_vehicle_count: number;
+  average_speed: number;
+  congestion_level: string;
+  time_period: string;
+}
+
 const Map: React.FC = () => {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<mapboxgl.Map | null>(null);
   const markersRef = useRef<globalThis.Map<string, { marker: mapboxgl.Marker; element: HTMLDivElement }>>(new globalThis.Map());
   const hoverPopup = useRef<mapboxgl.Popup | null>(null);
   const clickPopup = useRef<mapboxgl.Popup | null>(null);
+  const roadPopupRef = useRef<mapboxgl.Popup | null>(null);
+  
+  // Refs to hold current traffic values
+  const trafficVolumeNBRef = useRef(35);
+  const trafficVolumeSBRef = useRef(68);
+  const currentVehiclesNBRef = useRef(0);
+  const currentVehiclesSBRef = useRef(0);
 
-  // Traffic volume state (0-100)
-  const [trafficVolumeNB, setTrafficVolumeNB] = useState(35); // Northbound traffic
-  const [trafficVolumeSB, setTrafficVolumeSB] = useState(68); // Southbound traffic
+  // Traffic volume state (0-100) - will be calculated from actual data
+  const [trafficVolumeNB, setTrafficVolumeNB] = useState(35);
+  const [trafficVolumeSB, setTrafficVolumeSB] = useState(68);
+  const [currentVehiclesNB, setCurrentVehiclesNB] = useState(0);
+  const [currentVehiclesSB, setCurrentVehiclesSB] = useState(0);
+  
+  // State for tracking current data index
+  const [trafficData, setTrafficData] = useState<TrafficDataPoint[]>([]);
+  const [currentIndex, setCurrentIndex] = useState(0);
 
   const { pinpoints, activeStudyCase } = useDashboardStore();
 
+  // Fetch traffic data on mount
+  useEffect(() => {
+    const fetchTrafficData = async () => {
+      try {
+        // Fetch data for intersection 31 (or make this configurable)
+        const response = await fetch('http://localhost:5001/api/traffic/directional?intersection_id=31&limit=24');
+        const result = await response.json();
+        
+        if (result.success && result.data) {
+          setTrafficData(result.data);
+          console.log(`Loaded ${result.data.length} traffic data points`);
+        }
+      } catch (error) {
+        console.error('Error fetching traffic data:', error);
+      }
+    };
+
+    fetchTrafficData();
+  }, []);
+
+  // Update traffic volumes every 3 seconds and cycle through data
+  useEffect(() => {
+    if (trafficData.length === 0) return;
+
+    const interval = setInterval(() => {
+      const currentData = trafficData[currentIndex];
+      
+      // Calculate northbound total
+      const nbTotal = currentData.northbound_left + currentData.northbound_thru + currentData.northbound_right;
+      
+      // Calculate southbound total
+      const sbTotal = currentData.southbound_left + currentData.southbound_thru + currentData.southbound_right;
+      
+      // Store actual vehicle counts
+      setCurrentVehiclesNB(nbTotal);
+      setCurrentVehiclesSB(sbTotal);
+      
+      // Update refs
+      currentVehiclesNBRef.current = nbTotal;
+      currentVehiclesSBRef.current = sbTotal;
+      
+      // Normalize to 0-100 scale (assuming max ~400 vehicles per direction)
+      const nbVolume = Math.min(100, Math.round((nbTotal / 400) * 100));
+      const sbVolume = Math.min(100, Math.round((sbTotal / 400) * 100));
+      
+      setTrafficVolumeNB(nbVolume);
+      setTrafficVolumeSB(sbVolume);
+      
+      // Update refs
+      trafficVolumeNBRef.current = nbVolume;
+      trafficVolumeSBRef.current = sbVolume;
+      
+      console.log(`Time: ${currentData.reading_timestamp}, NB: ${nbTotal} (${nbVolume}%), SB: ${sbTotal} (${sbVolume}%)`);
+      
+      // Move to next data point, loop back to start if at end
+      setCurrentIndex((prevIndex) => (prevIndex + 1) % trafficData.length);
+    }, 3000);
+
+    return () => clearInterval(interval);
+  }, [trafficData, currentIndex]);
+
   // Function to get color based on traffic volume (0-100)
   const getTrafficColor = (volume: number): string => {
-    // Green (low traffic) to Red (high traffic)
-    // 0-33: Green
-    // 34-66: Yellow/Orange
-    // 67-100: Red
-    
     if (volume <= 33) {
-      // Green to Yellow-Green
       const ratio = volume / 33;
       const r = Math.round(34 + (139 - 34) * ratio);
       const g = Math.round(197 + (195 - 197) * ratio);
       const b = Math.round(94 + (66 - 94) * ratio);
       return `rgb(${r}, ${g}, ${b})`;
     } else if (volume <= 66) {
-      // Yellow-Green to Orange
       const ratio = (volume - 33) / 33;
       const r = Math.round(139 + (245 - 139) * ratio);
       const g = Math.round(195 + (158 - 195) * ratio);
       const b = Math.round(66 + (11 - 66) * ratio);
       return `rgb(${r}, ${g}, ${b})`;
     } else {
-      // Orange to Red
       const ratio = (volume - 66) / 34;
       const r = Math.round(245 + (239 - 245) * ratio);
       const g = Math.round(158 - 158 * ratio);
@@ -54,7 +136,6 @@ const Map: React.FC = () => {
 
   // Initialize map only once - on mount
   useEffect(() => {
-    // Prevent re-initialization if map already exists
     if (map.current) return;
 
     if (!mapboxgl.supported()) {
@@ -74,7 +155,6 @@ const Map: React.FC = () => {
 
     console.log('Initializing map...');
 
-    // Initialize map with 3D view settings
     map.current = new mapboxgl.Map({
       container: mapContainer.current,
       style: 'mapbox://styles/mapbox/dark-v11',
@@ -85,7 +165,6 @@ const Map: React.FC = () => {
       antialias: true,
     });
 
-    // Add navigation controls
     map.current.addControl(new mapboxgl.NavigationControl({
       visualizePitch: true
     }), 'top-right');
@@ -93,7 +172,6 @@ const Map: React.FC = () => {
     map.current.on('load', () => {
       console.info('Map loaded successfully');
 
-      // Add 3D terrain
       map.current!.addSource('mapbox-dem', {
         type: 'raster-dem',
         url: 'mapbox://mapbox.mapbox-terrain-dem-v1',
@@ -103,7 +181,6 @@ const Map: React.FC = () => {
 
       map.current!.setTerrain({ source: 'mapbox-dem', exaggeration: 1.5 });
 
-      // Add sky layer
       map.current!.addLayer({
         id: 'sky',
         type: 'sky',
@@ -115,11 +192,9 @@ const Map: React.FC = () => {
       });
     });
 
-    // Wait for style to be fully loaded before adding 3D buildings
     map.current.on('style.load', () => {
       console.log('Style loaded, adding 3D buildings...');
 
-      // Find the first symbol layer to insert buildings before labels
       const layers = map.current!.getStyle().layers;
       let labelLayerId: string | undefined;
 
@@ -130,7 +205,6 @@ const Map: React.FC = () => {
         }
       }
 
-      // Add 3D buildings layer
       if (!map.current!.getLayer('3d-buildings')) {
         map.current!.addLayer(
           {
@@ -177,14 +251,12 @@ const Map: React.FC = () => {
         console.log('3D buildings layer added');
       }
 
-      // Add Mass Ave Northbound if not already added
       if (!map.current!.getSource('mass-ave-nb')) {
         map.current!.addSource('mass-ave-nb', {
           type: 'geojson',
           data: MassAveNB as FeatureCollection<LineString, GeoJsonProperties>
         });
 
-        // Glow layer for NB
         map.current!.addLayer({
           id: 'mass-ave-nb-glow',
           type: 'line',
@@ -198,7 +270,6 @@ const Map: React.FC = () => {
           },
         });
 
-        // Main line for NB
         map.current!.addLayer({
           id: 'mass-ave-nb-highlight',
           type: 'line',
@@ -212,14 +283,12 @@ const Map: React.FC = () => {
         });
       }
 
-      // Add Mass Ave Southbound if not already added
       if (!map.current!.getSource('mass-ave-sb')) {
         map.current!.addSource('mass-ave-sb', {
           type: 'geojson',
           data: MassAveSB as FeatureCollection<LineString, GeoJsonProperties>
         });
 
-        // Glow layer for SB
         map.current!.addLayer({
           id: 'mass-ave-sb-glow',
           type: 'line',
@@ -233,7 +302,6 @@ const Map: React.FC = () => {
           },
         });
 
-        // Main line for SB
         map.current!.addLayer({
           id: 'mass-ave-sb-highlight',
           type: 'line',
@@ -247,12 +315,60 @@ const Map: React.FC = () => {
         });
       }
 
-      // Only proceed with pinpoints if they exist and are not empty
+      // Road hover popups
+      roadPopupRef.current = new mapboxgl.Popup({
+        closeButton: false,
+        closeOnClick: false,
+      });
+
+      // Northbound road hover
+      const updateNBPopup = (e: mapboxgl.MapMouseEvent) => {
+        map.current!.getCanvas().style.cursor = 'pointer';
+
+        roadPopupRef.current!
+          .setLngLat(e.lngLat)
+          .setHTML(`
+            <div style="padding: 8px; font-family: system-ui, -apple-system, sans-serif;">
+              <h4 style="margin: 0 0 4px 0; font-weight: 600; color: #fff;">Massachusetts Ave Northbound</h4>
+              <p style="margin: 0; font-size: 12px; color: #d1d5db;">Traffic Volume: <strong style="color: ${getTrafficColor(trafficVolumeNBRef.current)}">${currentVehiclesNBRef.current} vehicles (${trafficVolumeNBRef.current}%)</strong></p>
+            </div>
+          `)
+          .addTo(map.current!);
+      };
+      
+      map.current!.on('mouseenter', 'mass-ave-nb-highlight', updateNBPopup);
+
+      map.current!.on('mouseleave', 'mass-ave-nb-highlight', () => {
+        map.current!.getCanvas().style.cursor = '';
+        roadPopupRef.current!.remove();
+      });
+
+      // Southbound road hover
+      const updateSBPopup = (e: mapboxgl.MapMouseEvent) => {
+        map.current!.getCanvas().style.cursor = 'pointer';
+
+        roadPopupRef.current!
+          .setLngLat(e.lngLat)
+          .setHTML(`
+            <div style="padding: 8px; font-family: system-ui, -apple-system, sans-serif;">
+              <h4 style="margin: 0 0 4px 0; font-weight: 600; color: #fff;">Massachusetts Ave Southbound</h4>
+              <p style="margin: 0; font-size: 12px; color: #d1d5db;">Traffic Volume: <strong style="color: ${getTrafficColor(trafficVolumeSBRef.current)}">${currentVehiclesSBRef.current} vehicles (${trafficVolumeSBRef.current}%)</strong></p>
+            </div>
+          `)
+          .addTo(map.current!);
+      };
+      
+      map.current!.on('mouseenter', 'mass-ave-sb-highlight', updateSBPopup);
+
+      map.current!.on('mouseleave', 'mass-ave-sb-highlight', () => {
+        map.current!.getCanvas().style.cursor = '';
+        roadPopupRef.current!.remove();
+      });
+
       if (!pinpoints || pinpoints.length === 0) {
-        return; // Early return if no pinpoints
+        return;
       }
 
-      // Convert pinpoints to GeoJSON
       const pinpointsGeoJSON: FeatureCollection<Point, GeoJsonProperties> = {
         type: 'FeatureCollection',
         features: pinpoints.map((pinpoint) => ({
@@ -269,7 +385,6 @@ const Map: React.FC = () => {
         })),
       };
 
-      // Add pinpoints as a GeoJSON source
       if (!map.current!.getSource('pinpoints')) {
         map.current!.addSource('pinpoints', {
           type: 'geojson',
@@ -277,7 +392,6 @@ const Map: React.FC = () => {
         });
       }
 
-      // Add custom HTML markers for each pinpoint (only once)
       if (markersRef.current.size === 0) {
         pinpoints.forEach((pinpoint) => {
           const el = document.createElement('div');
@@ -340,16 +454,13 @@ const Map: React.FC = () => {
         });
       }
 
-      // Building interaction variables
       let hoveredBuildingId: string | number | null = null;
 
-      // Create a popup for hover
       hoverPopup.current = new mapboxgl.Popup({
         closeButton: false,
         closeOnClick: false,
       });
 
-      // Change cursor on hover
       map.current!.on('mousemove', '3d-buildings', (e) => {
         map.current!.getCanvas().style.cursor = 'pointer';
 
@@ -398,7 +509,6 @@ const Map: React.FC = () => {
         hoverPopup.current!.remove();
       });
 
-      // Handle building clicks with enhanced popup
       map.current!.on('click', '3d-buildings', (e) => {
         if (e.features && e.features.length > 0) {
           const feature = e.features[0];
@@ -414,12 +524,10 @@ const Map: React.FC = () => {
 
           console.log('Building clicked:', buildingInfo);
 
-          // Remove existing click popup if any
           if (clickPopup.current) {
             clickPopup.current.remove();
           }
 
-          // Create enhanced popup with close button and smaller size
           clickPopup.current = new mapboxgl.Popup({
             offset: 25,
             closeButton: true,
@@ -431,7 +539,6 @@ const Map: React.FC = () => {
             .setLngLat(e.lngLat)
             .setHTML(
               `<div style="padding: 12px; font-family: system-ui, -apple-system, sans-serif;">
-                <!-- Header -->
                 <div style="border-bottom: 1px solid #fbbf24; padding-bottom: 8px; margin-bottom: 12px;">
                   <h3 style="margin:0; font-weight:600; font-size:16px; color: #fff;">
                     ${buildingInfo.name}
@@ -440,7 +547,6 @@ const Map: React.FC = () => {
                     ${buildingInfo.type}
                   </p>
                 </div>
-                <!-- Building Metrics -->
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px;">
                   <div style="background: rgba(251, 191, 36, 0.1); padding: 8px; border-radius: 4px; border-left: 2px solid #fbbf24;">
                     <p style="margin:0; font-size:10px; color: #9ca3af; text-transform: uppercase;">Height</p>
@@ -451,7 +557,6 @@ const Map: React.FC = () => {
                     <p style="margin:2px 0 0 0; font-size:14px; font-weight:600; color: #22c55e;">87.3%</p>
                   </div>
                 </div>
-                <!-- Quick Stats -->
                 <div style="font-size:11px; color: #d1d5db; margin-bottom: 12px;">
                   <div style="display: flex; justify-content: space-between; padding: 4px 0;">
                     <span>Consumption:</span>
@@ -462,7 +567,6 @@ const Map: React.FC = () => {
                     <strong style="color: #f59e0b;">48.2 tons/yr</strong>
                   </div>
                 </div>
-                <!-- Action Button -->
                 <button 
                   onclick="console.log('View analytics for: ${buildingInfo.name}')" 
                   style="width: 100%; padding: 8px; background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%); color: #000; border: none; border-radius: 4px; cursor: pointer; font-weight: 600; font-size: 12px; transition: transform 0.2s;"
@@ -475,21 +579,17 @@ const Map: React.FC = () => {
             )
             .addTo(map.current!);
 
-          // Listen for popup close
           clickPopup.current.on('close', () => {
             // Popup closed
           });
         }
       });
 
-      // Add click listener to close popup when clicking on map (but not on buildings)
       map.current!.on('click', (e) => {
-        // Check if click was on a building
         const features = map.current!.queryRenderedFeatures(e.point, {
           layers: ['3d-buildings']
         });
 
-        // If no building was clicked and there's an open popup, close it
         if (features.length === 0 && clickPopup.current) {
           clickPopup.current.remove();
         }
@@ -500,13 +600,12 @@ const Map: React.FC = () => {
       // Handle map error
     });
 
-    // Store references for cleanup
     const markersForCleanup = markersRef.current;
     const hoverPopupForCleanup = hoverPopup.current;
     const clickPopupForCleanup = clickPopup.current;
+    const roadPopupForCleanup = roadPopupRef.current;
 
     return () => {
-      // Clean up with stored references
       markersForCleanup.forEach(({ marker }) => marker.remove());
       markersForCleanup.clear();
       if (hoverPopupForCleanup) {
@@ -514,6 +613,9 @@ const Map: React.FC = () => {
       }
       if (clickPopupForCleanup) {
         clickPopupForCleanup.remove();
+      }
+      if (roadPopupForCleanup) {
+        roadPopupForCleanup.remove();
       }
       if (map.current) {
         map.current.remove();
@@ -526,7 +628,6 @@ const Map: React.FC = () => {
   useEffect(() => {
     if (!map.current) return;
 
-    // Update Northbound colors
     if (map.current.getLayer('mass-ave-nb-glow')) {
       map.current.setPaintProperty('mass-ave-nb-glow', 'line-color', getTrafficColor(trafficVolumeNB));
     }
@@ -534,7 +635,6 @@ const Map: React.FC = () => {
       map.current.setPaintProperty('mass-ave-nb-highlight', 'line-color', getTrafficColor(trafficVolumeNB));
     }
 
-    // Update Southbound colors
     if (map.current.getLayer('mass-ave-sb-glow')) {
       map.current.setPaintProperty('mass-ave-sb-glow', 'line-color', getTrafficColor(trafficVolumeSB));
     }
