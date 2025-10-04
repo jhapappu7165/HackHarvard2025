@@ -21,6 +21,7 @@ export interface StatCard {
 
 interface DashboardState {
   // UI State
+  // UI State
   activeStudyCase: StudyCase | null;
   loading: boolean;
   error: string | null;

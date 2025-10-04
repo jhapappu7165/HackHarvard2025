@@ -37,14 +37,14 @@ export function AnalysisPanel() {
         <CardContent className="flex items-center justify-center h-64">
           <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
         </CardContent>
-      </Card>
-    );
+        </Card>
+      );
   }
 
   return (
     <Card className="col-span-4">
       <CardHeader>
-        <CardTitle>AI-Powered Insights</CardTitle>
+        <CardTitle>AI-Powered City Optimization Suggestions</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
         {insights.length === 0 ? (
@@ -54,7 +54,12 @@ export function AnalysisPanel() {
             <p className="text-sm">Generate data to see AI-powered recommendations.</p>
           </div>
         ) : (
-          insights.slice(0, 5).map((insight) => {
+          insights
+            .sort((a: Insight, b: Insight) => {
+              const priorityOrder = { critical: 0, high: 1, medium: 2, low: 3 };
+              return priorityOrder[a.priority] - priorityOrder[b.priority];
+            })
+            .slice(0, 5).map((insight: Insight) => {
             const Icon = priorityIcons[insight.priority];
             return (
               <div
