@@ -15,8 +15,6 @@ import {
   Wrench,
   UserCog,
   UserX,
-  Users,
-  MessagesSquare,
   ShieldCheck,
   AudioWaveform,
   Command,
@@ -33,17 +31,17 @@ export const sidebarData: SidebarData = {
   },
   teams: [
     {
-      name: 'Shadcn Admin',
+      name: 'Boston',
       logo: Command,
-      plan: 'Vite + ShadcnUI',
+      plan: '',
     },
     {
-      name: 'Acme Inc',
+      name: 'Cambridge',
       logo: GalleryVerticalEnd,
       plan: 'Enterprise',
     },
     {
-      name: 'Acme Corp.',
+      name: 'Sommerville',
       logo: AudioWaveform,
       plan: 'Startup',
     },
@@ -66,17 +64,6 @@ export const sidebarData: SidebarData = {
           title: 'Apps',
           url: '/apps',
           icon: Package,
-        },
-        {
-          title: 'Chats',
-          url: '/chats',
-          badge: '3',
-          icon: MessagesSquare,
-        },
-        {
-          title: 'Users',
-          url: '/users',
-          icon: Users,
         },
         {
           title: 'Secured by Clerk',
