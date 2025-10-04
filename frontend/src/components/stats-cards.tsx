@@ -1,87 +1,80 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Zap, DollarSign, Leaf, Activity, Loader2 } from 'lucide-react';
 import { useDashboardStore } from '@/store/dashboardStore';
-import {
-  DollarSign,
-  Activity,
-  Zap,
-  Leaf,
-  Gauge,
-  Car,
-  Truck,
-  AlertTriangle,
-  Thermometer,
-  Wind,
-  CloudRain,
-  Sun,
-} from 'lucide-react';
-
-const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
-  'dollar-sign': DollarSign,
-  activity: Activity,
-  zap: Zap,
-  leaf: Leaf,
-  gauge: Gauge,
-  car: Car,
-  truck: Truck,
-  'alert-triangle': AlertTriangle,
-  thermometer: Thermometer,
-  wind: Wind,
-  'cloud-rain': CloudRain,
-  sun: Sun,
-};
+import { useEffect } from 'react';
 
 export function StatsCards() {
-  const { activeStudyCase, stats } = useDashboardStore();
+  const { stats, loading, fetchStats } = useDashboardStore();
 
-  const defaultStats = [
+  useEffect(() => {
+    if (!stats) {
+      fetchStats();
+    }
+  }, [stats, fetchStats]);
+
+  if (loading) {
+    return (
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        {[...Array(4)].map((_, i) => (
+          <Card key={i}>
+            <CardContent className="flex items-center justify-center h-32">
+              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+    );
+  }
+
+  if (!stats) {
+    return null;
+  }
+
+  const cards = [
     {
-      title: 'Total Revenue',
-      value: '$45,231.89',
-      change: '+20.1% from last month',
-      icon: 'dollar-sign',
+      title: 'Power Consumption',
+      value: `${stats.energy.total_usage.toLocaleString()} ${stats.energy.unit}`,
+      change: '+18% from last month',
+      icon: Zap,
+      iconColor: 'text-yellow-500',
     },
     {
-      title: 'Subscriptions',
-      value: '+2350',
-      change: '+180.1% from last month',
-      icon: 'activity',
+      title: 'Energy Cost',
+      value: `$${stats.energy.total_cost.toLocaleString()}`,
+      change: `+$${(stats.energy.total_cost * 0.1).toLocaleString()} from budget`,
+      icon: DollarSign,
+      iconColor: 'text-green-500',
     },
     {
-      title: 'Sales',
-      value: '+12,234',
-      change: '+19% from last month',
-      icon: 'zap',
+      title: 'Potential Savings',
+      value: `$${stats.insights.potential_savings.toLocaleString()}`,
+      change: `${stats.insights.high_priority} high priority insights`,
+      icon: Leaf,
+      iconColor: 'text-emerald-500',
     },
     {
-      title: 'Active Now',
-      value: '+573',
-      change: '+201 since last hour',
-      icon: 'activity',
+      title: 'Active Insights',
+      value: stats.insights.total.toString(),
+      change: `Avg temp: ${stats.weather.avg_temperature.toFixed(1)}°F`,
+      icon: Activity,
+      iconColor: 'text-blue-500',
     },
   ];
 
-  const displayStats = activeStudyCase ? stats[activeStudyCase] : defaultStats;
-
   return (
-    <>
-      {displayStats.map((stat, index) => {
-        const IconComponent = iconMap[stat.icon] || Activity;
-        
-        return (
-          <Card key={index}>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">
-                {stat.title}
-              </CardTitle>
-              <IconComponent className="text-muted-foreground h-4 w-4" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stat.value}</div>
-              <p className="text-muted-foreground text-xs">{stat.change}</p>
-            </CardContent>
-          </Card>
-        );
-      })}
-    </>
+    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      {cards.map((card, index) => (
+        <Card key={index}>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">{card.title}</CardTitle>
+            <card.icon className={`h-4 w-4 ${card.iconColor}`} />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{card.value}</div>
+            <p className="text-xs text-muted-foreground">{card.change}</p>
+          </CardContent>
+        </Card>
+      ))}
+    </div>
   );
 }
