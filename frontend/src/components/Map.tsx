@@ -1,65 +1,107 @@
-// Map.tsx
 import React, { useRef, useEffect } from 'react';
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
 
+// Import GeoJSON files (declarations.d.ts needed for this)
+import MassAveNB from '../assets/MassAveNB.json';
+import MassAveSB from '../assets/MassAveSB.json';
 
-// BEGIN DEBUG
-console.log('Top of Map.tsx loaded');
-console.log('mapboxgl object:', mapboxgl);
-
-//CHANGE THIS TO ENV FILE BEFORE PUSH
+// Set access token (use your .env for production)
 mapboxgl.accessToken = import.meta.env.VITE_MAPBOX_TOKEN as string;
-
 
 const Map: React.FC = () => {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<mapboxgl.Map | null>(null);
 
   useEffect(() => {
-    // Browser/mapbox GL support check
     if (!mapboxgl.supported()) {
       alert('Your browser does not support Mapbox GL');
-      console.error('Mapbox GL not supported');
       return;
     }
+    if (!mapContainer.current) return;
 
-    // Confirm container ref is set
-    if (!mapContainer.current) {
-      alert('Map container not found');
-      console.error('Map container ref missing');
-      return;
-    } else {
-      console.info('Map container is present and dimensions are:', mapContainer.current.getBoundingClientRect());
-    }
+    // Example: Set or update dynamic traffic values (use real data here)
+    const nbTrafficCount = 120;
+    const sbTrafficCount = 80;
 
-    // Confirm access token
-    if (!mapboxgl.accessToken || !mapboxgl.accessToken.startsWith('pk.')) {
-      alert('Missing or invalid Mapbox public token');
-      console.error('Mapbox accessToken:', mapboxgl.accessToken);
-      return;
-    } else {
-      console.log('Using Mapbox access token:', mapboxgl.accessToken);
-    }
+    // Add/update properties to northbound and southbound features
+    const MassAveNBWithProps = {
+      ...MassAveNB,
+      features: MassAveNB.features.map((f: any) => ({
+        ...f,
+        properties: { ...(f.properties || {}), trafficCount: nbTrafficCount, direction: 'northbound' }
+      }))
+    };
 
-    // Initialize map and listen for errors/load
+    const MassAveSBWithProps = {
+      ...MassAveSB,
+      features: MassAveSB.features.map((f: any) => ({
+        ...f,
+        properties: { ...(f.properties || {}), trafficCount: sbTrafficCount, direction: 'southbound' }
+      }))
+    };
+
+    // Create map instance
     map.current = new mapboxgl.Map({
       container: mapContainer.current,
       style: 'mapbox://styles/mapbox/streets-v12',
-      center: [-71.0589, 42.3601],
-      zoom: 12,
+      center: [-71.0589, 42.3601], // Boston
+      zoom: 15,
     });
 
     map.current.on('load', () => {
-      console.info('Map loaded successfully');
+      // Northbound
+      map.current?.addSource('MassAveNB', {
+        type: 'geojson',
+        data: MassAveNBWithProps,
+      });
+      map.current?.addLayer({
+        id: 'MassAveNB-layer',
+        type: 'line',
+        source: 'MassAveNB',
+        paint: {
+          'line-width': 6,
+          'line-color': [
+            'interpolate',
+            ['linear'],
+            ['get', 'trafficCount'],
+            0, '#00FF00',     // green
+            100, '#FFFF00',   // yellow
+            200, '#FF0000'    // red
+          ]
+        },
+      });
+
+      // Southbound
+      map.current?.addSource('MassAveSB', {
+        type: 'geojson',
+        data: MassAveSBWithProps,
+      });
+      map.current?.addLayer({
+        id: 'MassAveSB-layer',
+        type: 'line',
+        source: 'MassAveSB',
+        paint: {
+          'line-width': 6,
+          'line-color': [
+            'interpolate',
+            ['linear'],
+            ['get', 'trafficCount'],
+            0, '#00FF00',
+            100, '#FFFF00',
+            200, '#FF0000'
+          ]
+        },
+      });
     });
 
-    map.current.on('error', (e) => {
-      alert('Mapbox map error detected. See console for details.');
-      console.error('Mapbox map error event:', e.error);
-    });
-
-    
+    // Clean up on unmount
+    return () => {
+      if (map.current) {
+        map.current.remove();
+        map.current = null;
+      }
+    };
   }, []);
 
   return (
@@ -73,12 +115,7 @@ const Map: React.FC = () => {
         position: 'relative',
       }}
       className="map-container"
-    >
-      {/* Visual debug: fallback text if map does not render */}
-      <noscript>
-        <p style={{ color: 'red' }}>JavaScript is off. Mapbox maps require JavaScript.</p>
-      </noscript>
-    </div>
+    />
   );
 };
 
