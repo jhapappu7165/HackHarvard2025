@@ -12,22 +12,9 @@ import { AlertCircle, TrendingUp, Lightbulb } from 'lucide-react';
 export function AnalysisPanel() {
   const { activeStudyCase, suggestions } = useDashboardStore();
 
+  // Since we always have an activeStudyCase (defaults to 'energy'), we don't need the fallback
   if (!activeStudyCase) {
-    return (
-      <Card className="col-span-1 lg:col-span-3">
-        <CardHeader>
-          <CardTitle>Recent Sales</CardTitle>
-          <CardDescription>You made 265 sales this month.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            <p className="text-sm text-muted-foreground">
-              Select a study case pinpoint on the map to view AI-powered analysis and recommendations.
-            </p>
-          </div>
-        </CardContent>
-      </Card>
-    );
+    return null;
   }
 
   const currentSuggestions = suggestions[activeStudyCase];
