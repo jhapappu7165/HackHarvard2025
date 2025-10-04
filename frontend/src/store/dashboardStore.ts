@@ -227,7 +227,7 @@ const energySuggestions: AnalysisSuggestion[] = [
 ];
 
 export const useDashboardStore = create<DashboardState>((set) => ({
-  activeStudyCase: null,
+  activeStudyCase: 'energy', // Changed from null to 'energy' as default
   pinpoints: [
     {
       id: 'traffic-1',
