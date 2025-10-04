@@ -1,173 +1,121 @@
 from flask import Blueprint, request, jsonify
 from services.weather_generator import WeatherDataGenerator
 from utils.supabase_client import SupabaseClient
+import httpx
+from datetime import datetime
+import pytz
 import logging
 
 logger = logging.getLogger(__name__)
 weather_bp = Blueprint('weather', __name__)
 db = SupabaseClient()
 
-@weather_bp.route('/stations', methods=['GET'])
-def get_weather_stations():
-    """Get all weather stations"""
-    try:
-        response = db.get_client().table('weather_stations')\
-            .select('*')\
-            .execute()
-        
-        return jsonify({
-            'success': True,
-            'count': len(response.data),
-            'stations': response.data
-        }), 200
-        
-    except Exception as e:
-        logger.error(f"Error fetching weather stations: {str(e)}")
-        return jsonify({'success': False, 'error': str(e)}), 500
+# Boston coordinates for OpenMeteo API
+LAT = 42.3601
+LON = -71.0589
 
-@weather_bp.route('/stations/<int:station_id>', methods=['GET'])
-def get_weather_station(station_id):
-    """Get specific weather station"""
-    try:
-        response = db.get_client().table('weather_stations')\
-            .select('*')\
-            .eq('id', station_id)\
-            .single()\
-            .execute()
-        
-        return jsonify({
-            'success': True,
-            'station': response.data
-        }), 200
-        
-    except Exception as e:
-        logger.error(f"Error fetching weather station {station_id}: {str(e)}")
-        return jsonify({'success': False, 'error': str(e)}), 404
 
-@weather_bp.route('/data', methods=['GET'])
-def get_weather_data():
-    """Get weather data with optional filters"""
+@weather_bp.route('/openmeteo_current', methods=['GET'])
+def get_current_weather_openmeteo():
+    """
+    Get current weather from OpenMeteo API with comprehensive data:
+    - is_day
+    - cloudcover
+    - shortwave_radiation (solar intensity)
+    - temperature_2m
+    - precipitation_probability (from current forecast hour)
+    - rain
+    """
     try:
-        station_id = request.args.get('station_id')
-        start_date = request.args.get('start_date')
-        end_date = request.args.get('end_date')
-        limit = int(request.args.get('limit', 1000))
+        url = (
+            f"https://api.open-meteo.com/v1/forecast"
+            f"?latitude={LAT}&longitude={LON}"
+            f"&current=is_day,cloudcover,shortwave_radiation,temperature_2m,precipitation,rain"
+            f"&hourly=precipitation_probability"
+            f"&forecast_days=1"
+        )
         
-        query = db.get_client().table('weather_data').select('*')
-        
-        if station_id:
-            query = query.eq('station_id', int(station_id))
-        if start_date:
-            query = query.gte('reading_date', start_date)
-        if end_date:
-            query = query.lte('reading_date', end_date)
-        
-        response = query.limit(limit).order('reading_date').execute()
-        
-        return jsonify({
-            'success': True,
-            'count': len(response.data),
-            'data': response.data
-        }), 200
-        
-    except Exception as e:
-        logger.error(f"Error fetching weather data: {str(e)}")
-        return jsonify({'success': False, 'error': str(e)}), 500
+        with httpx.Client() as client:
+            r = client.get(url)
+            if r.status_code != 200:
+                raise Exception(f"OpenMeteo API error: {r.status_code}")
+            data = r.json()
 
-@weather_bp.route('/stations/<int:station_id>/data', methods=['GET'])
-def get_station_data(station_id):
-    """Get weather data for specific station"""
-    try:
-        start_date = request.args.get('start_date')
-        end_date = request.args.get('end_date')
+        current = data.get("current", {})
         
-        query = db.get_client().table('weather_data')\
-            .select('*')\
-            .eq('station_id', station_id)
-        
-        if start_date:
-            query = query.gte('reading_date', start_date)
-        if end_date:
-            query = query.lte('reading_date', end_date)
-        
-        response = query.order('reading_date').execute()
-        
-        return jsonify({
-            'success': True,
-            'count': len(response.data),
-            'data': response.data
-        }), 200
-        
-    except Exception as e:
-        logger.error(f"Error fetching data for station {station_id}: {str(e)}")
-        return jsonify({'success': False, 'error': str(e)}), 500
+        # Get current hour's precipitation probability from hourly data
+        hourly = data.get("hourly", {})
+        current_precip_prob = None
+        if hourly.get("precipitation_probability"):
+            # Take the first hour's precipitation probability as current
+            current_precip_prob = hourly["precipitation_probability"][0]
 
-@weather_bp.route('/generate-data', methods=['POST'])
-def generate_weather_data():
-    """Generate synthetic weather data"""
-    try:
-        logger.info("Starting weather data generation...")
-        generator = WeatherDataGenerator()
-        
-        stations = generator.generate_stations()
-        weather_data = generator.generate_weather_data_for_all_stations()
-        
-        logger.info(f"Generated {len(stations)} stations and {len(weather_data)} readings")
-        
-        return jsonify({
-            'success': True,
-            'message': 'Weather data generated successfully',
-            'stations_created': len(stations),
-            'readings_created': len(weather_data)
-        }), 201
-        
-    except Exception as e:
-        logger.error(f"Error generating weather data: {str(e)}")
-        return jsonify({'success': False, 'error': str(e)}), 500
-
-@weather_bp.route('/summary', methods=['GET'])
-def get_weather_summary():
-    """Get weather summary statistics"""
-    try:
-        start_date = request.args.get('start_date')
-        end_date = request.args.get('end_date')
-        
-        query = db.get_client().table('weather_data').select('*')
-        
-        if start_date:
-            query = query.gte('reading_date', start_date)
-        if end_date:
-            query = query.lte('reading_date', end_date)
-        
-        response = query.execute()
-        data = response.data
-        
-        if not data:
-            return jsonify({
-                'success': True,
-                'message': 'No weather data available'
-            }), 200
-        
-        # Calculate summary statistics
-        temps = [d['temp_avg'] for d in data]
-        hdds = [d['heating_degree_days'] for d in data]
-        cdds = [d['cooling_degree_days'] for d in data]
-        
-        summary = {
-            'avg_temperature': round(sum(temps) / len(temps), 2),
-            'min_temperature': min(d['temp_min'] for d in data),
-            'max_temperature': max(d['temp_max'] for d in data),
-            'total_heating_degree_days': sum(hdds),
-            'total_cooling_degree_days': sum(cdds),
-            'total_precipitation': round(sum(d['precipitation'] for d in data), 2),
-            'records_count': len(data)
+        normalized = {
+            "timestamp": current.get("time"),
+            "is_day": current.get("is_day"),
+            "cloudcover_percent": current.get("cloudcover"),
+            "shortwave_radiation_wm2": current.get("shortwave_radiation"),
+            "temperature_c": current.get("temperature_2m"),
+            "precip_prob_percent": current_precip_prob,
+            "rain_mm": current.get("rain"),
         }
         
         return jsonify({
             'success': True,
-            'summary': summary
+            'data': normalized
         }), 200
         
     except Exception as e:
-        logger.error(f"Error calculating weather summary: {str(e)}")
+        logger.error(f"Error fetching current weather from OpenMeteo: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@weather_bp.route('/openmeteo_forecast', methods=['GET'])
+def get_forecast_openmeteo():
+    """
+    Get hourly forecast from OpenMeteo API with essential fields:
+    - is_day
+    - cloudcover
+    - shortwave_radiation (solar intensity)
+    - temperature_2m
+    - precipitation_probability
+    - rain
+    """
+    try:
+        url = (
+            f"https://api.open-meteo.com/v1/forecast"
+            f"?latitude={LAT}&longitude={LON}"
+            f"&hourly=is_day,cloudcover,shortwave_radiation,temperature_2m,precipitation_probability,rain"
+            f"&forecast_days=1"
+        )
+
+        with httpx.Client() as client:
+            r = client.get(url)
+            if r.status_code != 200:
+                raise Exception(f"OpenMeteo API error: {r.status_code}")
+            data = r.json()
+
+        h = data.get("hourly", {})
+        times = h.get("time", [])
+
+        results = []
+        for i, t in enumerate(times):
+            results.append({
+                "timestamp": t,
+                "is_day": h.get("is_day", [None])[i] if i < len(h.get("is_day", [])) else None,
+                "cloudcover_percent": h.get("cloudcover", [None])[i] if i < len(h.get("cloudcover", [])) else None,
+                "shortwave_radiation_wm2": h.get("shortwave_radiation", [None])[i] if i < len(h.get("shortwave_radiation", [])) else None,
+                "temperature_c": h.get("temperature_2m", [None])[i] if i < len(h.get("temperature_2m", [])) else None,
+                "precip_prob_percent": h.get("precipitation_probability", [None])[i] if i < len(h.get("precipitation_probability", [])) else None,
+                "rain_mm": h.get("rain", [None])[i] if i < len(h.get("rain", [])) else None,
+            })
+
+        return jsonify({
+            'success': True,
+            'count': len(results),
+            'data': results
+        }), 200
+        
+    except Exception as e:
+        logger.error(f"Error fetching forecast from OpenMeteo: {str(e)}")
         return jsonify({'success': False, 'error': str(e)}), 500

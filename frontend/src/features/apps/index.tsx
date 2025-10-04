@@ -6,7 +6,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 
 // Backend API configuration
-const WEATHER_API_BASE = 'http://127.0.0.1:8002'
+const WEATHER_API_BASE = 'http://127.0.0.1:5001/api/weather'
 
 interface CurrentWeather {
   timestamp: string
@@ -130,14 +130,16 @@ export function Apps() {
       setError(null)
 
       // Fetch current weather
-      const currentRes = await fetch(`${WEATHER_API_BASE}/weather/openmeteo_current`)
+      const currentRes = await fetch(`${WEATHER_API_BASE}/openmeteo_current`)
       if (!currentRes.ok) throw new Error('Failed to fetch current weather')
-      const current = await currentRes.json()
+      const currentData = await currentRes.json()
+      const current = currentData.data // Extract data from Flask response
 
       // Fetch hourly forecast
-      const forecastRes = await fetch(`${WEATHER_API_BASE}/weather/openmeteo_forecast`)
+      const forecastRes = await fetch(`${WEATHER_API_BASE}/openmeteo_forecast`)
       if (!forecastRes.ok) throw new Error('Failed to fetch forecast')
-      const forecast = await forecastRes.json()
+      const forecastData = await forecastRes.json()
+      const forecast = forecastData.data // Extract data from Flask response
 
       // Filter to only include current and future hours
       const now = new Date()
@@ -202,12 +204,12 @@ export function Apps() {
               Try Again
             </Button>
             <div className="text-sm text-muted-foreground space-y-2">
-              <p>Make sure the weather backend is running:</p>
+              <p>Make sure the main backend is running:</p>
               <code className="block bg-muted p-2 rounded text-xs">
-                cd backend/weather<br />
-                python main.py
+                cd backend<br />
+                python app.py
               </code>
-              <p>Backend should be at: <strong>http://127.0.0.1:8002</strong></p>
+              <p>Backend should be at: <strong>http://127.0.0.1:5001</strong></p>
             </div>
           </CardContent>
         </Card>
