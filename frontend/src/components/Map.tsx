@@ -158,7 +158,7 @@ const Map: React.FC = () => {
     map.current = new mapboxgl.Map({
       container: mapContainer.current,
       style: 'mapbox://styles/mapbox/dark-v11',
-      center: [-71.1189, 42.3736],
+      center: [-71.0565, 42.3555],
       zoom: 12,
       pitch: 60,
       bearing: -17.5,
@@ -170,7 +170,7 @@ const Map: React.FC = () => {
     }), 'top-right');
 
     map.current.on('load', () => {
-      console.info('Map loaded successfully');
+      console.info('===== Map loaded successfully =====');
 
       map.current!.addSource('mapbox-dem', {
         type: 'raster-dem',
@@ -193,7 +193,10 @@ const Map: React.FC = () => {
     });
 
     map.current.on('style.load', () => {
-      console.log('Style loaded, adding 3D buildings...');
+      console.log('===== Style loaded, adding 3D buildings... =====');
+      
+      // Debug: Log current zoom level
+      console.log('Current zoom level:', map.current!.getZoom());
 
       const layers = map.current!.getStyle().layers;
       let labelLayerId: string | undefined;
@@ -213,7 +216,7 @@ const Map: React.FC = () => {
             'source-layer': 'building',
             filter: ['==', 'extrude', 'true'],
             type: 'fill-extrusion',
-            minzoom: 14,
+            minzoom: 12,  // Changed from 14 to match initial zoom
             paint: {
               'fill-extrusion-color': [
                 'case',
@@ -249,6 +252,12 @@ const Map: React.FC = () => {
           labelLayerId
         );
         console.log('3D buildings layer added');
+        
+        // Debug: Verify layer was added
+        setTimeout(() => {
+          console.log('Layer check:', map.current!.getLayer('3d-buildings'));
+          console.log('All layers:', map.current!.getStyle().layers?.map(l => l.id));
+        }, 1000);
       }
 
       if (!map.current!.getSource('mass-ave-nb')) {
@@ -320,6 +329,8 @@ const Map: React.FC = () => {
         closeButton: false,
         closeOnClick: false,
       });
+      
+      console.log('Setting up click handlers...');
 
       // Northbound road hover
       const updateNBPopup = (e: mapboxgl.MapMouseEvent) => {
@@ -363,6 +374,105 @@ const Map: React.FC = () => {
       map.current!.on('mouseleave', 'mass-ave-sb-highlight', () => {
         map.current!.getCanvas().style.cursor = '';
         roadPopupRef.current!.remove();
+      });
+      
+      // Add general map click handler here, after all layers are set up
+      console.log('Setting up click handlers...');
+      console.log('Map object exists:', !!map.current);
+      
+      map.current!.on('click', (e) => {
+        console.log('===== MAP CLICK EVENT FIRED =====');
+        console.log('Map clicked at:', e.lngLat);
+        console.log('Click point pixel coordinates:', e.point);
+        
+        // Check for buildings first
+        const buildingFeatures = map.current!.queryRenderedFeatures(e.point, {
+          layers: ['3d-buildings']
+        });
+        console.log('Buildings at click point:', buildingFeatures.length);
+        
+        if (buildingFeatures.length > 0) {
+          console.log('Building features:', buildingFeatures);
+
+          const feature = buildingFeatures[0];
+          const properties = feature.properties;
+
+          const buildingInfo = {
+            name: properties?.name || 'Unnamed Building',
+            height: properties?.height || 'N/A',
+            type: properties?.type || 'Commercial',
+            underground: properties?.underground || 'No',
+            minHeight: properties?.min_height || 0,
+          };
+
+          console.log('Building clicked:', buildingInfo);
+
+          if (clickPopup.current) {
+            clickPopup.current.remove();
+          }
+
+          clickPopup.current = new mapboxgl.Popup({
+            offset: 25,
+            closeButton: true,
+            closeOnClick: true,
+            closeOnMove: false,
+            maxWidth: '280px',
+            className: 'building-details-popup'
+          })
+            .setLngLat(e.lngLat)
+            .setHTML(
+              `<div style="padding: 12px; font-family: system-ui, -apple-system, sans-serif;">
+                <div style="border-bottom: 1px solid #fbbf24; padding-bottom: 8px; margin-bottom: 12px;">
+                  <h3 style="margin:0; font-weight:600; font-size:16px; color: #fff;">
+                    ${buildingInfo.name}
+                  </h3>
+                  <p style="margin:2px 0 0 0; font-size:11px; color: #9ca3af;">
+                    ${buildingInfo.type}
+                  </p>
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px;">
+                  <div style="background: rgba(251, 191, 36, 0.1); padding: 8px; border-radius: 4px; border-left: 2px solid #fbbf24;">
+                    <p style="margin:0; font-size:10px; color: #9ca3af; text-transform: uppercase;">Height</p>
+                    <p style="margin:2px 0 0 0; font-size:14px; font-weight:600; color: #fbbf24;">${buildingInfo.height}m</p>
+                  </div>
+                  <div style="background: rgba(34, 197, 94, 0.1); padding: 8px; border-radius: 4px; border-left: 2px solid #22c55e;">
+                    <p style="margin:0; font-size:10px; color: #9ca3af; text-transform: uppercase;">Energy</p>
+                    <p style="margin:2px 0 0 0; font-size:14px; font-weight:600; color: #22c55e;">87.3%</p>
+                  </div>
+                </div>
+                <div style="font-size:11px; color: #d1d5db; margin-bottom: 12px;">
+                  <div style="display: flex; justify-content: space-between; padding: 4px 0;">
+                    <span>Consumption:</span>
+                    <strong style="color: #22c55e;">124.5 MWh/yr</strong>
+                  </div>
+                  <div style="display: flex; justify-content: space-between; padding: 4px 0;">
+                    <span>CO₂ Emissions:</span>
+                    <strong style="color: #f59e0b;">48.2 tons/yr</strong>
+                  </div>
+                </div>
+                <button 
+                  onclick="console.log('View analytics for: ${buildingInfo.name}')" 
+                  style="width: 100%; padding: 8px; background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%); color: #000; border: none; border-radius: 4px; cursor: pointer; font-weight: 600; font-size: 12px; transition: transform 0.2s;"
+                  onmouseover="this.style.transform='scale(1.02)'"
+                  onmouseout="this.style.transform='scale(1)'"
+                >
+                  View Details
+                </button>
+              </div>`
+            )
+            .addTo(map.current!);
+
+          clickPopup.current.on('close', () => {
+            // Popup closed
+          });
+          
+          return; // Stop here, don't close popup
+        }
+
+        // Only close popup if we didn't click on a building
+        if (clickPopup.current) {
+          clickPopup.current.remove();
+        }
       });
 
       if (!pinpoints || pinpoints.length === 0) {
@@ -462,6 +572,7 @@ const Map: React.FC = () => {
       });
 
       map.current!.on('mousemove', '3d-buildings', (e) => {
+        console.log('Mouse moving over buildings!'); // Debug
         map.current!.getCanvas().style.cursor = 'pointer';
 
         if (e.features && e.features.length > 0) {
@@ -509,9 +620,23 @@ const Map: React.FC = () => {
         hoverPopup.current!.remove();
       });
 
-      map.current!.on('click', '3d-buildings', (e) => {
-        if (e.features && e.features.length > 0) {
-          const feature = e.features[0];
+      map.current!.on('click', (e) => {
+        console.log('===== MAP CLICK EVENT FIRED =====');
+        console.log('Map clicked at:', e.lngLat);
+        console.log('Click point pixel coordinates:', e.point);
+        
+        // Check for buildings first
+        const buildingFeatures = map.current!.queryRenderedFeatures(e.point, {
+          layers: ['3d-buildings']
+        });
+        console.log('Buildings at click point:', buildingFeatures.length);
+        
+        if (buildingFeatures.length > 0) {
+          console.log('Building features:', buildingFeatures);
+
+        // If we clicked on a building, handle it and stop
+        if (buildingFeatures.length > 0) {
+          const feature = buildingFeatures[0];
           const properties = feature.properties;
 
           const buildingInfo = {
@@ -582,22 +707,19 @@ const Map: React.FC = () => {
           clickPopup.current.on('close', () => {
             // Popup closed
           });
+          
+          return; // Stop here, don't close popup
         }
-      });
 
-      map.current!.on('click', (e) => {
-        const features = map.current!.queryRenderedFeatures(e.point, {
-          layers: ['3d-buildings']
-        });
-
-        if (features.length === 0 && clickPopup.current) {
+        // Only close popup if we didn't click on a building
+        if (clickPopup.current) {
           clickPopup.current.remove();
-        }
+        }}
       });
     });
 
-    map.current.on('error', (_e) => {
-      // Handle map error
+    map.current.on('error', (e) => {
+      console.error('===== MAP ERROR =====', e);
     });
 
     const markersForCleanup = markersRef.current;
@@ -672,8 +794,11 @@ const Map: React.FC = () => {
         width: '100%',
         height: 400,
         borderRadius: '8px',
+        position: 'relative',
+        zIndex: 1,
       }}
       className="map-container"
+      onClick={() => console.log('DIV CLICKED')}
     />
   );
 };
