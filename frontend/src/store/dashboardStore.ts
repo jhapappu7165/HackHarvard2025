@@ -21,7 +21,6 @@ export interface StatCard {
 
 interface DashboardState {
   // UI State
-  // UI State
   activeStudyCase: StudyCase | null;
   loading: boolean;
   error: string | null;
@@ -42,7 +41,6 @@ interface DashboardState {
   generateAllData: () => Promise<void>;
   initializeDashboard: () => Promise<void>;
 }
-
 export const useDashboardStore = create<DashboardState>((set, get) => ({
   // Initial state
   activeStudyCase: 'energy',
@@ -68,7 +66,7 @@ export const useDashboardStore = create<DashboardState>((set, get) => ({
     }
   },
 
-  fetchInsights: async (params) => {
+  fetchInsights: async (params?: { priority?: string }) => {
     try {
       set({ loading: true, error: null });
       const response = await api.insights.getAll(params);
