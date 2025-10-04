@@ -12,6 +12,9 @@ importers:
         specifier: 2.13.0
         version: 2.13.0
     devDependencies:
+      '@types/geojson':
+        specifier: ^7946.0.16
+        version: 7946.0.16
       '@types/mapbox-gl':
         specifier: ^3.4.1
         version: 3.4.1
