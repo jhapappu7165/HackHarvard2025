@@ -32,7 +32,7 @@ export function AnalysisPanel() {
     return (
       <Card className="col-span-4">
         <CardHeader>
-          <CardTitle>AI-Powered Insights</CardTitle>
+          <CardTitle>AI-Powered City Optimization Suggestions</CardTitle>
         </CardHeader>
         <CardContent className="flex items-center justify-center h-64">
           <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
@@ -44,7 +44,7 @@ export function AnalysisPanel() {
   return (
     <Card className="col-span-4">
       <CardHeader>
-        <CardTitle>AI-Powered Insights</CardTitle>
+        <CardTitle>AI-Powered City Optimization Suggestions</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
         {insights.length === 0 ? (

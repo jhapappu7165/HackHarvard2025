@@ -68,10 +68,11 @@ export const useDashboardStore = create<DashboardState>((set, get) => ({
   fetchInsights: async (params) => {
     try {
       set({ loading: true, error: null });
-      const response = await api.insights.getAll(params);
-      set({ insights: response.insights, loading: false });
+      // Use the new AI-powered city suggestions instead of old hardcoded insights
+      const response = await api.insights.getCitySuggestions();
+      set({ insights: response.suggestions, loading: false });
     } catch (error) {
-      console.error('Error fetching insights:', error);
+      console.error('Error fetching AI suggestions:', error);
       set({ error: (error as Error).message, loading: false });
     }
   },

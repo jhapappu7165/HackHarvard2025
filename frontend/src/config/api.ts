@@ -1,4 +1,5 @@
 // API Configuration for Flask Backend
+import type { CitySuggestion } from '@/types';
 export const API_CONFIG = {
   BASE_URL: import.meta.env.VITE_API_URL || 'http://localhost:5000',
   ENDPOINTS: {
@@ -26,6 +27,9 @@ export const API_CONFIG = {
     GENERATE_INSIGHTS: '/api/insights/generate-insights',
     BUILDING_INSIGHTS: (id: number) => `/api/insights/insights/building/${id}`,
     INSIGHTS_SUMMARY: '/api/insights/summary',
+    
+    // AI-Powered Suggestions (Gemini)
+    CITY_SUGGESTIONS: '/api/insights/suggestions',
     
     // Dashboard endpoints
     DASHBOARD_OVERVIEW: '/api/dashboard/overview',
@@ -168,6 +172,13 @@ export const api = {
     
     getSummary: () =>
       fetchAPI<{ success: boolean; summary: any }>(API_CONFIG.ENDPOINTS.INSIGHTS_SUMMARY),
+    
+    // AI-Powered City Suggestions (Gemini)
+    getCitySuggestions: () =>
+      fetchAPI<{ success: boolean; suggestions: CitySuggestion[]; message: string; data_summary: any }>(
+        API_CONFIG.ENDPOINTS.CITY_SUGGESTIONS,
+        { method: 'POST' }
+      ),
   },
   
   // Dashboard APIs
