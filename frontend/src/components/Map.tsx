@@ -46,8 +46,8 @@ const Map: React.FC = () => {
       style: 'mapbox://styles/mapbox/dark-v11',
       center: [-71.1189, 42.3736],
       zoom: 12,
-      pitch: 0,
-      bearing: 0,
+      pitch: 60,
+      bearing: -17.5,
       antialias: true,
     });
 
@@ -67,7 +67,7 @@ const Map: React.FC = () => {
         maxzoom: 14,
       });
 
-      map.current!.setTerrain({ source: 'mapbox-dem', exaggeration: 0 });
+      map.current!.setTerrain({ source: 'mapbox-dem', exaggeration: 1.5 });
 
       // Add sky layer
       map.current!.addLayer({
