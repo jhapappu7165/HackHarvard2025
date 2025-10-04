@@ -203,3 +203,183 @@ def get_insights_summary():
     except Exception as e:
         logger.error(f"Error calculating insights summary: {str(e)}")
         return jsonify({'success': False, 'error': str(e)}), 500
+
+@insights_bp.route('/suggestions', methods=['POST'])
+def generate_city_optimization_suggestions():
+    """Generate city-wide optimization suggestions using Gemini API"""
+    try:
+        import google.generativeai as genai
+        import os
+        import json
+        
+        # Configure Gemini API
+        from config import Config
+        api_key = Config.GEMINI_API_KEY
+        if not api_key:
+            return jsonify({'success': False, 'error': 'GEMINI_API_KEY not configured'}), 500
+        
+        # Try to use Gemini API, fallback to mock data if it fails
+        try:
+            genai.configure(api_key=api_key)
+            model = genai.GenerativeModel('gemini-2.5-flash')
+            use_gemini = True
+        except Exception as e:
+            logger.warning(f"Gemini API not available, using mock data: {str(e)}")
+            use_gemini = False
+        
+        logger.info("Fetching city-wide data for optimization suggestions...")
+        
+        # Get all energy buildings data
+        buildings_response = db.get_client().table('energy_buildings').select('*').execute()
+        buildings = buildings_response.data if buildings_response.data else []
+        
+        # Get recent energy consumption data
+        energy_response = db.get_client().table('energy_readings')\
+            .select('*')\
+            .order('reading_date', desc=True)\
+            .limit(1000)\
+            .execute()
+        energy_data = energy_response.data if energy_response.data else []
+        
+        # Get recent traffic data
+        traffic_response = db.get_client().table('traffic_data')\
+            .select('*')\
+            .order('reading_timestamp', desc=True)\
+            .limit(1000)\
+            .execute()
+        traffic_data = traffic_response.data if traffic_response.data else []
+        
+        # Calculate city-wide statistics
+        total_buildings = len(buildings)
+        total_energy_usage = sum(r.get('usage', 0) for r in energy_data)
+        total_energy_cost = sum(r.get('cost', 0) for r in energy_data)
+        avg_energy_per_building = total_energy_usage / max(total_buildings, 1)
+        
+        # Analyze traffic patterns
+        traffic_by_period = {}
+        for reading in traffic_data:
+            period = reading.get('time_period', 'unknown')
+            congestion = reading.get('congestion_level', 'unknown')
+            if period not in traffic_by_period:
+                traffic_by_period[period] = []
+            traffic_by_period[period].append(congestion)
+        
+        # Create detailed prompt for Gemini
+        prompt = f"""
+You are an expert smart city consultant analyzing Boston's municipal energy consumption and traffic patterns to identify problems that need attention.
+
+ANALYSIS CONTEXT:
+You are analyzing real data from Boston's municipal infrastructure to identify problems that need the city government's attention.
+
+CITY DATA SUMMARY:
+- Total Municipal Buildings: {total_buildings}
+- Total Energy Consumption: {total_energy_usage:,.2f} kWh
+- Total Energy Cost: ${total_energy_cost:,.2f}
+- Average Energy per Building: {avg_energy_per_building:,.2f} kWh
+- Energy Data Points Analyzed: {len(energy_data)}
+- Traffic Data Points Analyzed: {len(traffic_data)}
+
+TRAFFIC PATTERNS BY TIME PERIOD:
+{json.dumps(traffic_by_period, indent=2)}
+
+BUILDING PORTFOLIO:
+{json.dumps([b.get('category', 'Unknown') for b in buildings[:10]], indent=2)}
+
+ANALYSIS REQUIREMENTS:
+Analyze the relationship between energy consumption patterns and traffic flow data to identify PROBLEMS that need attention. Focus on:
+
+1. Energy consumption problems that are costing the city money
+2. Traffic flow problems that are causing congestion and inefficiencies
+3. Cross-sector problems where energy and traffic systems are not working together
+4. Infrastructure problems that need attention
+5. Policy gaps that are causing issues
+6. Data patterns that reveal underlying problems
+
+RESPONSE FORMAT REQUIREMENTS:
+Generate 3-5 specific problem identifications. Each problem must follow this exact structure:
+
+- "title": Should describe WHAT THE PROBLEM IS in a clear, specific way. Be SPECIFIC to particular buildings, locations, or intersections. Keep it to ONE LINE maximum.
+- "why": Provide a concise one-line explanation of WHY this is a problem, focusing on the data evidence or impact.
+
+CRITICAL INSTRUCTIONS:
+1. Base ALL problem identifications on the actual data provided above
+2. Make the "title" field describe the PROBLEM clearly and be LOCATION-SPECIFIC (mention specific buildings, schools, intersections, or areas)
+3. Make the "why" field exactly one line explaining why this is a problem based on the data
+4. Focus on problems that are evident from the data patterns
+5. Do NOT provide solutions - only identify problems
+6. ORDER problems by priority: all HIGH priority first, then MEDIUM, then LOW
+
+Return your response as a JSON array with this exact structure:
+[
+    {{
+        "title": "[Problem Description] at [Specific Location/Building]",
+        "why": "One-line explanation of why this is a problem based on data evidence",
+        "category": "Energy" or "Traffic" or "Cross-Sector",
+        "priority": "high" or "medium" or "low",
+        "estimated_impact": "Brief description of expected impact",
+        "implementation_timeline": "Short-term" or "Medium-term" or "Long-term",
+        "estimated_cost": "Low" or "Medium" or "High" or "TBD"
+    }}
+]
+
+IMPORTANT: Return ONLY valid JSON, no markdown formatting or additional text. Base all recommendations on the actual data provided.
+"""
+        
+        if use_gemini:
+            # Call Gemini API
+            logger.info("Calling Gemini API for city optimization suggestions...")
+            try:
+                response = model.generate_content(prompt)
+                
+                # Parse response
+                try:
+                    # Remove markdown code blocks if present
+                    text = response.text.strip()
+                    if text.startswith('```'):
+                        text = text.replace('```json', '').replace('```', '').strip()
+                    
+                    suggestions = json.loads(text)
+                    
+                    logger.info(f"Generated {len(suggestions)} city optimization suggestions via Gemini")
+                    
+                    return jsonify({
+                        'success': True,
+                        'message': f'Generated {len(suggestions)} AI-powered city optimization suggestions',
+                        'count': len(suggestions),
+                        'suggestions': suggestions,
+                        'data_summary': {
+                            'total_buildings': total_buildings,
+                            'total_energy_usage': total_energy_usage,
+                            'total_energy_cost': total_energy_cost,
+                            'data_points_analyzed': len(energy_data) + len(traffic_data)
+                        }
+                    }), 200
+                    
+                except json.JSONDecodeError as e:
+                    logger.error(f"Failed to parse Gemini response: {str(e)}")
+                    logger.error(f"Response was: {response.text[:500]}")
+                    # Fall through to mock data
+                    use_gemini = False
+                    
+            except Exception as e:
+                logger.error(f"Gemini API call failed: {str(e)}")
+                use_gemini = False
+        
+        if not use_gemini:
+            # Return error if Gemini API is not available
+            logger.error("Gemini API is not available and no fallback is provided")
+            return jsonify({
+                'success': False,
+                'error': 'AI service unavailable. Please check Gemini API configuration.',
+                'message': 'To enable AI-powered suggestions, please configure a valid GEMINI_API_KEY in your .env file'
+            }), 503
+        
+    except Exception as e:
+        logger.error(f"Error generating city optimization suggestions: {str(e)}")
+        import traceback
+        logger.error(f"Full traceback: {traceback.format_exc()}")
+        return jsonify({
+            'success': False, 
+            'error': str(e),
+            'message': 'An unexpected error occurred while generating suggestions'
+        }), 500

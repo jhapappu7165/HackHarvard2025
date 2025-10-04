@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import Map from '@/components/Map';
+import  Map from '@/components/Map';
 import { StatsCards } from '@/components/stats-cards';
 import { AnalysisPanel } from '@/components/analysis-panel';
 import { Button } from '@/components/ui/button';

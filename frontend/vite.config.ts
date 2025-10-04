@@ -9,7 +9,7 @@ export default defineConfig({
   plugins: [
     tanstackRouter({
       target: 'react',
-      autoCodeSplitting: true,
+      autoCodeSplitting: false, // Disable auto code splitting temporarily
     }),
     react(),
     tailwindcss(),
@@ -17,6 +17,15 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
+    },
+  },
+  optimizeDeps: {
+    include: ['react', 'react-dom', '@tanstack/react-router', '@tanstack/react-query'],
+    force: true,
+  },
+  server: {
+    hmr: {
+      overlay: false,
     },
   },
 })

@@ -59,6 +59,9 @@ class Config:
     WEATHER_API_KEY = os.getenv('WEATHER_API_KEY', '')  # Optional: real weather data
     WEATHER_API_URL = 'https://api.openweathermap.org/data/2.5'
     
+    # Gemini AI Configuration
+    GEMINI_API_KEY = os.getenv('GEMINI_API_KEY', '')
+    
     # Traffic Configuration
     TRAFFIC_TIME_PERIODS = [
         'morning_peak',      # 7-9 AM

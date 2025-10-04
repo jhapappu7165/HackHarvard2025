@@ -84,6 +84,18 @@ export interface Insight {
   created_at?: string;
 }
 
+// AI-Powered City Suggestion types
+export interface CitySuggestion {
+  title: string;
+  instruction: string;
+  why: string;
+  category: 'Energy' | 'Traffic' | 'Cross-Sector';
+  priority: 'high' | 'medium' | 'low';
+  estimated_impact: string;
+  implementation_timeline: 'Short-term' | 'Medium-term' | 'Long-term';
+  estimated_cost: 'Low' | 'Medium' | 'High' | 'TBD';
+}
+
 // Dashboard types
 export interface DashboardStats {
   energy: {
