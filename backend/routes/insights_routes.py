@@ -264,12 +264,9 @@ def generate_city_optimization_suggestions():
                 traffic_by_period[period] = []
             traffic_by_period[period].append(congestion)
         
-        # Create detailed prompt for Gemini
+        # Create concise prompt for Gemini
         prompt = f"""
-You are an expert smart city consultant analyzing Boston's municipal energy consumption and traffic patterns to identify problems that need attention.
-
-ANALYSIS CONTEXT:
-You are analyzing real data from Boston's municipal infrastructure to identify problems that need the city government's attention.
+You are a Boston city analyst. Identify the TOP 3-4 problems wasting money or causing inefficiency in city operations.
 
 CITY DATA SUMMARY:
 - Total Municipal Buildings: {total_buildings}
@@ -286,41 +283,58 @@ BUILDING PORTFOLIO:
 {json.dumps([b.get('category', 'Unknown') for b in buildings[:10]], indent=2)}
 
 ANALYSIS REQUIREMENTS:
-Analyze the relationship between energy consumption patterns and traffic flow data to identify PROBLEMS that need attention. Focus on:
-
-1. Energy consumption problems that are costing the city money
-2. Traffic flow problems that are causing congestion and inefficiencies
-3. Cross-sector problems where energy and traffic systems are not working together
-4. Infrastructure problems that need attention
-5. Policy gaps that are causing issues
-6. Data patterns that reveal underlying problems
-
-RESPONSE FORMAT REQUIREMENTS:
-Generate 3-5 specific problem identifications. Each problem must follow this exact structure:
-
-- "title": Should describe WHAT THE PROBLEM IS in a clear, specific way. Be SPECIFIC to particular buildings, locations, or intersections. Keep it to ONE LINE maximum.
-- "why": Provide a concise one-line explanation of WHY this is a problem, focusing on the data evidence or impact.
+Identify 3-4 HIGH-IMPACT problems from the data above. Focus on specific, actionable issues that waste money or cause inefficiency.
 
 CRITICAL INSTRUCTIONS:
-1. Base ALL problem identifications on the actual data provided above
-2. Make the "title" field describe the PROBLEM clearly and be LOCATION-SPECIFIC (mention specific buildings, schools, intersections, or areas)
-3. Make the "why" field exactly one line explaining why this is a problem based on the data
-4. Focus on problems that are evident from the data patterns
-5. Do NOT provide solutions - only identify problems
-6. ORDER problems by priority: all HIGH priority first, then MEDIUM, then LOW
+1. Keep titles SPECIFIC and LOCATION-BASED (name actual buildings/intersections)
+2. Keep "why" explanations SHORT and DATA-DRIVEN  
+3. Focus on problems with measurable financial/operational impact
+4. Order by priority: HIGH first, then MEDIUM
 
-Return your response as a JSON array with this exact structure:
+Return JSON with this exact structure:
 [
     {{
-        "title": "[Problem Description] at [Specific Location/Building]",
-        "why": "One-line explanation of why this is a problem based on data evidence",
+        "title": "Concise problem at [Specific Location]",
+        "why": "Short data-based reason why this costs money/causes inefficiency",
         "category": "Energy" or "Traffic" or "Cross-Sector",
         "priority": "high" or "medium" or "low",
-        "estimated_impact": "Brief description of expected impact",
+        "estimated_impact": "Concise impact description with numbers if possible",
         "implementation_timeline": "Short-term" or "Medium-term" or "Long-term",
-        "estimated_cost": "Low" or "Medium" or "High" or "TBD"
+        "estimated_cost": "Low" or "Medium" or "High" or "TBD",
+        "courseOfActions": [
+            {{
+                "id": 1,
+                "title": "Concise action (max 8 words)",
+                "description": "Brief actionable step (max 20 words)",
+                "impact": "High" or "Medium-High" or "Medium" or "Low",
+                "responsible": "Specific Department",
+                "expectedOutcomes": [
+                    "Specific metric: X% improvement",
+                    "Cost saving: $X per month",
+                    "Efficiency gain: X unit reduction"
+                ]
+            }},
+            {{
+                "id": 2,
+                "title": "Another concise action",
+                "description": "Another brief step",
+                "impact": "High" or "Medium-High" or "Medium" or "Low", 
+                "responsible": "Specific Department",
+                "expectedOutcomes": [
+                    "Measurable outcome 1",
+                    "Measurable outcome 2"
+                ]
+            }}
+        ]
     }}
 ]
+
+ACTION REQUIREMENTS:
+- Generate 2-3 actions per problem (not 4)
+- Keep action titles under 8 words
+- Keep descriptions under 20 words  
+- Include specific metrics in expected outcomes (percentages, dollar amounts, quantities)
+- Use real Boston city departments
 
 IMPORTANT: Return ONLY valid JSON, no markdown formatting or additional text. Base all recommendations on the actual data provided.
 """

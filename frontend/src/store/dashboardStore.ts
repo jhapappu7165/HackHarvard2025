@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { api } from '@/config/api';
-import type { Building, Insight, DashboardStats, MapData } from '@/types';
+import type { Building, CitySuggestion, DashboardStats, MapData } from '@/types';
 
 export type StudyCase = 'traffic' | 'weather' | 'energy';
 
@@ -24,17 +24,17 @@ interface DashboardState {
   activeStudyCase: StudyCase | null;
   loading: boolean;
   error: string | null;
-  
+
   // Data
   buildings: Building[];
-  insights: Insight[];
+  insights: CitySuggestion[];
   stats: DashboardStats | null;
   mapData: MapData | null;
-  
+
   // Actions
   setActiveStudyCase: (studyCase: StudyCase | null) => void;
   fetchBuildings: () => Promise<void>;
-  fetchInsights: (params?: { priority?: string }) => Promise<void>;
+  fetchInsights: () => Promise<void>;
   fetchStats: () => Promise<void>;
   fetchMapData: () => Promise<void>;
   generateAllData: () => Promise<void>;
@@ -65,7 +65,7 @@ export const useDashboardStore = create<DashboardState>((set, get) => ({
     }
   },
 
-  fetchInsights: async (params) => {
+  fetchInsights: async () => {
     try {
       set({ loading: true, error: null });
       // Use the new AI-powered city suggestions instead of old hardcoded insights
@@ -103,10 +103,10 @@ export const useDashboardStore = create<DashboardState>((set, get) => ({
     try {
       set({ loading: true, error: null });
       await api.dashboard.generateFast();
-      
+
       // Refresh all data after generation
       await get().initializeDashboard();
-      
+
       set({ loading: false });
     } catch (error) {
       console.error('Error generating data:', error);
@@ -117,15 +117,15 @@ export const useDashboardStore = create<DashboardState>((set, get) => ({
   initializeDashboard: async () => {
     try {
       set({ loading: true, error: null });
-      
+
       // Fetch all data in parallel
       await Promise.all([
         get().fetchBuildings(),
-        get().fetchInsights({ priority: 'high' }),
+        get().fetchInsights(),
         get().fetchStats(),
         get().fetchMapData(),
       ]);
-      
+
       set({ loading: false });
     } catch (error) {
       console.error('Error initializing dashboard:', error);

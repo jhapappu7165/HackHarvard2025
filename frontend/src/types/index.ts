@@ -85,15 +85,25 @@ export interface Insight {
 }
 
 // AI-Powered City Suggestion types
+export interface CourseOfAction {
+  id: number;
+  title: string;
+  description: string;
+  impact: string;
+  responsible: string;
+  expectedOutcomes: string[];
+}
+
 export interface CitySuggestion {
   title: string;
-  instruction: string;
+  instruction?: string;
   why: string;
   category: 'Energy' | 'Traffic' | 'Cross-Sector';
   priority: 'high' | 'medium' | 'low';
   estimated_impact: string;
   implementation_timeline: 'Short-term' | 'Medium-term' | 'Long-term';
   estimated_cost: 'Low' | 'Medium' | 'High' | 'TBD';
+  courseOfActions?: CourseOfAction[];
 }
 
 // Dashboard types
