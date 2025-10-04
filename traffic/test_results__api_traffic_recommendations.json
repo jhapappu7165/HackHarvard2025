@@ -1,0 +1,39 @@
+{
+  "recommendations": [
+    {
+      "step": 1,
+      "action": "Extend green time for mass_ave_southbound to 60 seconds",
+      "reasoning": "This street has the highest volume (88 vehicles) and needs priority to prevent congestion",
+      "impact": "Reduces delay by 30% and increases throughput by 25% by prioritizing the highest volume movement",
+      "implementation": "Adjust signal timing in traffic control system to extend green phase"
+    },
+    {
+      "step": 2,
+      "action": "Minimize signal time for driveway_westbound to 5 seconds",
+      "reasoning": "driveway_westbound has zero traffic and is wasting signal cycle time",
+      "impact": "Reduces overall cycle time by 20% and improves efficiency for active streets",
+      "implementation": "Set minimum green time for unused approach"
+    },
+    {
+      "step": 3,
+      "action": "Implement coordinated signal progression with 90-second cycle",
+      "reasoning": "Coordinated timing prevents traffic from hitting multiple red lights",
+      "impact": "Reduces travel time by 15% and improves fuel efficiency by 10%",
+      "implementation": "Synchronize with adjacent intersections using traffic management system"
+    },
+    {
+      "step": 4,
+      "action": "Add protected left-turn phase for mass_ave_northbound, magazine_st_eastbound",
+      "reasoning": "High left-turn volumes (60 vehicles) need dedicated time",
+      "impact": "Eliminates left-turn conflicts and reduces accidents by 40%",
+      "implementation": "Add left-turn arrow signal and adjust timing"
+    },
+    {
+      "step": 5,
+      "action": "Implement adaptive signal timing based on real-time traffic",
+      "reasoning": "Traffic patterns change throughout the day and need dynamic adjustment",
+      "impact": "Improves overall efficiency by 20% and reduces delays by 25%",
+      "implementation": "Install traffic sensors and connect to adaptive control system"
+    }
+  ]
+}

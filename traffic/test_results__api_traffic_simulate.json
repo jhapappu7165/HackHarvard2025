@@ -1,0 +1,73 @@
+{
+  "simulation": {
+    "simulation_id": "sim_1_20251004_030622",
+    "intersection_id": "1",
+    "timestamp": "2025-10-04T03:06:22.685498",
+    "current_performance": {
+      "simulation_type": "current",
+      "total_volume": 0,
+      "simulation_duration": 3600,
+      "street_performance": {},
+      "overall_performance": {
+        "average_delay": 0,
+        "total_throughput": 0,
+        "efficiency": 100,
+        "level_of_service": "A"
+      },
+      "rules_applied": []
+    },
+    "optimized_performance": {
+      "simulation_type": "optimized",
+      "total_volume": 0,
+      "simulation_duration": 3600,
+      "street_performance": {},
+      "overall_performance": {
+        "average_delay": 0,
+        "total_throughput": 0,
+        "efficiency": 100,
+        "level_of_service": "A"
+      },
+      "rules_applied": [
+        {
+          "street_name": "Mass Ave",
+          "direction": "Northbound",
+          "signal_timing": 30,
+          "cycle_length": 90,
+          "phase_duration": 30
+        },
+        {
+          "street_name": "Mass Ave",
+          "direction": "Southbound",
+          "signal_timing": 45,
+          "cycle_length": 90,
+          "phase_duration": 45
+        },
+        {
+          "street_name": "Magazine St",
+          "direction": "Eastbound",
+          "signal_timing": 15,
+          "cycle_length": 90,
+          "phase_duration": 15
+        },
+        {
+          "street_name": "Driveway",
+          "direction": "Westbound",
+          "signal_timing": 5,
+          "cycle_length": 90,
+          "phase_duration": 5
+        }
+      ]
+    },
+    "improvements": {
+      "delay_reduction_percent": 0,
+      "throughput_increase_percent": 0,
+      "efficiency_improvement": 0,
+      "fuel_savings_percent": 0,
+      "emission_reduction_percent": 0,
+      "level_of_service_improvement": "Maintained at A"
+    },
+    "recommendations": [
+      "Optimization shows marginal improvements - consider additional analysis"
+    ]
+  }
+}

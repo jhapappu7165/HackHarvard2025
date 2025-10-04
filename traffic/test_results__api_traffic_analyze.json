@@ -1,0 +1,124 @@
+{
+  "analysis": {
+    "intersection_id": "1",
+    "time_period": {
+      "start_time": "14:00",
+      "end_time": "15:00",
+      "duration_minutes": 60
+    },
+    "analysis_timestamp": "2025-10-04T03:06:22.682170",
+    "bottlenecks": [],
+    "traffic_volume_analysis": {
+      "mass_ave_northbound": {
+        "total_volume": 83,
+        "movement_distribution": {
+          "thru": 55.42168674698795,
+          "left": 44.57831325301205,
+          "right": 0.0,
+          "u_turn": 0.0
+        },
+        "primary_movement": {
+          "movement": "thru",
+          "volume": 46,
+          "percentage": 55.42168674698795
+        },
+        "efficiency_score": 60,
+        "optimization_potential": "medium"
+      },
+      "mass_ave_southbound": {
+        "total_volume": 88,
+        "movement_distribution": {
+          "thru": 78.4090909090909,
+          "left": 0.0,
+          "right": 21.59090909090909,
+          "u_turn": 0.0
+        },
+        "primary_movement": {
+          "movement": "thru",
+          "volume": 69,
+          "percentage": 78.4090909090909
+        },
+        "efficiency_score": 45,
+        "optimization_potential": "medium"
+      },
+      "magazine_st_eastbound": {
+        "total_volume": 51,
+        "movement_distribution": {
+          "thru": 0.0,
+          "left": 45.09803921568628,
+          "right": 54.90196078431373,
+          "u_turn": 0.0
+        },
+        "primary_movement": {
+          "movement": "right",
+          "volume": 28,
+          "percentage": 54.90196078431373
+        },
+        "efficiency_score": 60,
+        "optimization_potential": "medium"
+      },
+      "driveway_westbound": {
+        "total_volume": 0,
+        "movement_distribution": {
+          "thru": 0,
+          "left": 0,
+          "right": 0,
+          "u_turn": 0
+        },
+        "primary_movement": {
+          "movement": "thru",
+          "volume": 0,
+          "percentage": 0
+        },
+        "efficiency_score": 100,
+        "optimization_potential": "low"
+      }
+    },
+    "optimization_opportunities": [
+      {
+        "street": "mass_ave_northbound",
+        "movement": "right",
+        "opportunity": "Unused movement - can optimize signal timing",
+        "impact": "Reduce signal cycle time"
+      },
+      {
+        "street": "mass_ave_southbound",
+        "movement": "left",
+        "opportunity": "Unused movement - can optimize signal timing",
+        "impact": "Reduce signal cycle time"
+      },
+      {
+        "street": "magazine_st_eastbound",
+        "movement": "thru",
+        "opportunity": "Unused movement - can optimize signal timing",
+        "impact": "Reduce signal cycle time"
+      },
+      {
+        "street": "driveway_westbound",
+        "movement": "thru",
+        "opportunity": "Unused movement - can optimize signal timing",
+        "impact": "Reduce signal cycle time"
+      },
+      {
+        "street": "driveway_westbound",
+        "movement": "left",
+        "opportunity": "Unused movement - can optimize signal timing",
+        "impact": "Reduce signal cycle time"
+      },
+      {
+        "street": "driveway_westbound",
+        "movement": "right",
+        "opportunity": "Unused movement - can optimize signal timing",
+        "impact": "Reduce signal cycle time"
+      }
+    ],
+    "performance_metrics": {
+      "total_volume": 222,
+      "average_delay_seconds": 111.0,
+      "throughput_vph": 888,
+      "efficiency_score": 65,
+      "level_of_service": "F",
+      "optimization_potential": "high"
+    }
+  }
+}
