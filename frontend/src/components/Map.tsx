@@ -247,6 +247,11 @@ const Map: React.FC = () => {
         });
       }
 
+      // Only proceed with pinpoints if they exist and are not empty
+      if (!pinpoints || pinpoints.length === 0) {
+        return; // Early return if no pinpoints
+      }
+
       // Convert pinpoints to GeoJSON
       const pinpointsGeoJSON: FeatureCollection<Point, GeoJsonProperties> = {
         type: 'FeatureCollection',
@@ -540,7 +545,7 @@ const Map: React.FC = () => {
 
   // Update marker styles when active study case changes
   useEffect(() => {
-    if (!map.current) return;
+    if (!map.current || !pinpoints || pinpoints.length === 0) return;
 
     pinpoints.forEach((pinpoint) => {
       const markerData = markersRef.current.get(pinpoint.id);
