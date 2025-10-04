@@ -1,5 +1,8 @@
 // API Configuration for Flask Backend
+import type { CitySuggestion } from '@/types';
+
 export const API_CONFIG = {
+  // CONFLICT RESOLVED: Keeping port 5001
   BASE_URL: import.meta.env.VITE_API_URL || 'http://localhost:5001',
   ENDPOINTS: {
     // Energy endpoints
@@ -26,6 +29,9 @@ export const API_CONFIG = {
     GENERATE_INSIGHTS: '/api/insights/generate-insights',
     BUILDING_INSIGHTS: (id: number) => `/api/insights/insights/building/${id}`,
     INSIGHTS_SUMMARY: '/api/insights/summary',
+    
+    // NEW: AI-Powered Suggestions (Gemini) endpoint
+    CITY_SUGGESTIONS: '/api/insights/suggestions', 
     
     // Dashboard endpoints
     DASHBOARD_OVERVIEW: '/api/dashboard/overview',
@@ -168,6 +174,13 @@ export const api = {
     
     getSummary: () =>
       fetchAPI<{ success: boolean; summary: any }>(API_CONFIG.ENDPOINTS.INSIGHTS_SUMMARY),
+    
+    // NEW: AI-Powered City Suggestions (Gemini)
+    getCitySuggestions: () =>
+      fetchAPI<{ success: boolean; suggestions: CitySuggestion[]; message: string; data_summary: any }>(
+        API_CONFIG.ENDPOINTS.CITY_SUGGESTIONS,
+        { method: 'POST' }
+      ),
   },
   
   // Dashboard APIs

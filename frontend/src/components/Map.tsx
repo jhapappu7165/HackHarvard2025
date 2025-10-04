@@ -134,7 +134,7 @@ const Map: React.FC = () => {
     }
   };
 
-  // Initialize map only once - on mount
+  // Initialize map
   useEffect(() => {
     if (map.current) return;
 
@@ -546,7 +546,7 @@ const Map: React.FC = () => {
           const markerPopup = new mapboxgl.Popup({
             offset: 25,
             closeButton: false,
-            closeOnClick: false,
+            maxWidth: '300px'
           }).setHTML(
             `<h3 style="margin:0; font-weight:bold;">${pinpoint.name}</h3>
              <p style="margin:4px 0 0 0; text-transform:capitalize;">${pinpoint.type} Analysis</p>`
@@ -765,7 +765,7 @@ const Map: React.FC = () => {
     }
   }, [trafficVolumeNB, trafficVolumeSB]);
 
-  // Update marker styles when active study case changes
+  // Handle container resize
   useEffect(() => {
     if (!map.current || !pinpoints || pinpoints.length === 0) return;
 
