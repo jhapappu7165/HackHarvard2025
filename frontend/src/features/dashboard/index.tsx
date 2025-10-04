@@ -15,6 +15,8 @@ import { ProfileDropdown } from '@/components/profile-dropdown'
 import { Search } from '@/components/search'
 import { ThemeSwitch } from '@/components/theme-switch'
 import { RecentSales } from './components/recent-sales'
+import Map from '@/components/Map'
+import 'mapbox-gl/dist/mapbox-gl.css';
 
 export function Dashboard() {
   return (
@@ -154,8 +156,9 @@ export function Dashboard() {
                 <CardHeader>
                   <CardTitle>Map component</CardTitle>
                 </CardHeader>
-                <CardContent className='ps-2'>
+                <CardContent className='ps-2 w-full h-[400px]'>
                   {/* PUT map component HERE */}
+                  <Map />
                 </CardContent>
               </Card>
               <Card className='col-span-1 lg:col-span-3'>
