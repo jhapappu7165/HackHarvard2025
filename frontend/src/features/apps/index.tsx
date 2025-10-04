@@ -62,8 +62,6 @@ function getWeatherIcon(condition: WeatherCondition) {
 }
 
 function getWeatherSuggestion(data: CurrentWeather | HourlyWeather) {
-  const condition = getWeatherCondition(data)
-
   // High sun conditions
   if (data.is_day && data.shortwave_radiation_wm2 >= 500 && data.cloudcover_percent <= 40) {
     return {
@@ -121,7 +119,7 @@ function formatDate(timestamp: string): string {
 
 export function Apps() {
   const [currentWeather, setCurrentWeather] = useState<CurrentWeather | null>(null)
-  const [hourlyForecast, setHourlyForecast] = useState<HourlyWeather[]>([])
+  const [futureHourlyForecast, setFutureHourlyForecast] = useState<HourlyWeather[]>([])
   const [selectedHourIndex, setSelectedHourIndex] = useState(0)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -141,9 +139,16 @@ export function Apps() {
       if (!forecastRes.ok) throw new Error('Failed to fetch forecast')
       const forecast = await forecastRes.json()
 
+      // Filter to only include current and future hours
+      const now = new Date()
+      const currentAndFutureHours = forecast.filter((hour: HourlyWeather) => {
+        const hourTime = new Date(hour.timestamp)
+        return hourTime >= now
+      })
+
       setCurrentWeather(current)
-      setHourlyForecast(forecast)
-      setSelectedHourIndex(0) // Default to first hour
+      setFutureHourlyForecast(currentAndFutureHours)
+      setSelectedHourIndex(0) // Default to current/first future hour
     } catch (err) {
       console.error('Weather fetch error:', err)
       setError(err instanceof Error ? err.message : 'Failed to fetch weather data')
@@ -159,7 +164,7 @@ export function Apps() {
     return () => clearInterval(interval)
   }, [])
 
-  const selectedHour = hourlyForecast[selectedHourIndex] || currentWeather
+  const selectedHour = futureHourlyForecast[selectedHourIndex] || currentWeather
   const condition = selectedHour ? getWeatherCondition(selectedHour) : 'sunny'
   const suggestion = selectedHour ? getWeatherSuggestion(selectedHour) : null
 
@@ -309,25 +314,31 @@ export function Apps() {
             {/* Hourly Timeline */}
             <Card>
               <CardHeader>
-                <CardTitle>24-Hour Forecast</CardTitle>
+                <CardTitle>Upcoming Forecast</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="flex gap-2 overflow-x-auto pb-2">
-                  {hourlyForecast.map((hour, index) => {
+                  {futureHourlyForecast.map((hour, index) => {
                     const isSelected = index === selectedHourIndex
                     const hourCondition = getWeatherCondition(hour)
+                    const isCurrentHour = index === 0
                     return (
                       <button
                         key={hour.timestamp}
                         onClick={() => setSelectedHourIndex(index)}
                         className={`
-                          flex-shrink-0 p-3 rounded-lg border-2 transition-all
+                          flex-shrink-0 p-3 rounded-lg border-2 transition-all relative
                           ${isSelected
                             ? 'border-primary bg-primary/10 scale-105'
                             : 'border-transparent hover:border-primary/50 hover:bg-accent'
                           }
                         `}
                       >
+                        {isCurrentHour && (
+                          <div className="absolute -top-2 left-1/2 -translate-x-1/2 bg-primary text-primary-foreground text-xs px-2 py-0.5 rounded-full font-semibold">
+                            Now
+                          </div>
+                        )}
                         <div className="text-xs font-medium mb-1">
                           {formatTime(hour.timestamp)}
                         </div>
