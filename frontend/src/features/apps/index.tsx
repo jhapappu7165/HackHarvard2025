@@ -6,7 +6,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 
 // Backend API configuration
-const WEATHER_API_BASE = 'http://127.0.0.1:5001/api/weather'
+const WEATHER_API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5001'
 
 interface CurrentWeather {
   timestamp: string
@@ -130,16 +130,16 @@ export function Apps() {
       setError(null)
 
       // Fetch current weather
-      const currentRes = await fetch(`${WEATHER_API_BASE}/openmeteo_current`)
+      const currentRes = await fetch(`${WEATHER_API_BASE}/api/weather/data?limit=1`)
       if (!currentRes.ok) throw new Error('Failed to fetch current weather')
       const currentData = await currentRes.json()
-      const current = currentData.data // Extract data from Flask response
+      const current = currentData.data?.[0] // Get first weather data point
 
       // Fetch hourly forecast
-      const forecastRes = await fetch(`${WEATHER_API_BASE}/openmeteo_forecast`)
+      const forecastRes = await fetch(`${WEATHER_API_BASE}/api/weather/data?limit=24`)
       if (!forecastRes.ok) throw new Error('Failed to fetch forecast')
       const forecastData = await forecastRes.json()
-      const forecast = forecastData.data // Extract data from Flask response
+      const forecast = forecastData.data || [] // Get weather data array
 
       // Filter to only include current and future hours
       const now = new Date()
