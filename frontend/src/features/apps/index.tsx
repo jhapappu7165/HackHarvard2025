@@ -68,7 +68,7 @@ function getWeatherSuggestion(data: CurrentWeather | HourlyWeather) {
       title: '☀️ Route Extra Load to Solar',
       description: 'Sun intensity is high and skies are clear. Shift deferrable loads to solar for this hour.',
       action: 'Open Energy Dashboard',
-      link: '/energy',
+      link: '/',
     }
   }
 
@@ -78,7 +78,7 @@ function getWeatherSuggestion(data: CurrentWeather | HourlyWeather) {
       title: '🔋 Limit Solar Reliance',
       description: 'Solar output will be limited. Prefer grid or stored reserves for critical services.',
       action: 'Open Energy Dashboard',
-      link: '/energy',
+      link: '/',
     }
   }
 

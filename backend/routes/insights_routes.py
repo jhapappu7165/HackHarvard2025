@@ -267,7 +267,7 @@ def generate_city_optimization_suggestions():
         # Create detailed prompt for Gemini
         # Create detailed prompt for Gemini
         prompt = f"""
-You are an expert smart city consultant providing ACTIONABLE SOLUTIONS for Boston's municipal infrastructure optimization by identifying problems from given data.
+You are an expert smart city consultant providing ACTIONABLE SOLUTIONS for Boston's municipal infrastructure optimization from given data.
 
 ANALYSIS CONTEXT:
 You are analyzing real data from Boston's municipal infrastructure to provide specific, implementable solutions to real problems that city government can take action on immediately.
