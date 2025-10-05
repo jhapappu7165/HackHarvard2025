@@ -298,7 +298,7 @@ Analyze the relationship between energy consumption patterns and traffic flow da
 RESPONSE FORMAT REQUIREMENTS:
 Generate 3-5 specific problem identifications with possible solution suggestion. Each problem must follow this exact structure:
 
-- "title": Should describe WHAT THE PROBLEM IS in a clear, specific way with short solution suggestion. Be SPECIFIC to particular buildings, locations, or intersections. Keep it to ONE LINE maximum.
+- "title": Suggest actionable suggestion mentioning the problem. Be SPECIFIC to particular buildings, locations, or intersections. Keep it to ONE LINE maximum.
 - "why": Provide a concise one-line explanation of WHY this is a problem, focusing on the data evidence or impact.
 
 CRITICAL INSTRUCTIONS:
