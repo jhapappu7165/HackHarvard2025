@@ -87,7 +87,6 @@ export interface Insight {
 // AI-Powered City Suggestion types
 export interface CitySuggestion {
   title: string;
-  instruction: string;
   why: string;
   category: 'Energy' | 'Traffic' | 'Cross-Sector';
   priority: 'high' | 'medium' | 'low';
