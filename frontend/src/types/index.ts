@@ -80,7 +80,7 @@ export interface Insight {
   potential_savings: number | null;
   confidence_score: number | null;
   data_sources: string[] | null;
-  metadata: Record<string, any> | null;
+  metadata: Record<string, string | number | boolean | null> | null;
   created_at?: string;
 }
 

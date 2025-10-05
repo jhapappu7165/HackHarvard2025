@@ -1,10 +1,9 @@
 import React, { useRef, useEffect, useState } from 'react';
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
-import { useDashboardStore } from '@/store/dashboardStore';
 import MassAveSB from '../assets/MassAveSB.json';
 import MassAveNB from '../assets/MassAveNB.json';
-import { FeatureCollection, LineString, GeoJsonProperties, Point } from 'geojson';
+import type { FeatureCollection, LineString, GeoJsonProperties} from 'geojson';
 
 mapboxgl.accessToken = import.meta.env.VITE_MAPBOX_TOKEN as string;
 
@@ -41,14 +40,12 @@ const Map: React.FC = () => {
   // Traffic volume state (0-100) - will be calculated from actual data
   const [trafficVolumeNB, setTrafficVolumeNB] = useState(35);
   const [trafficVolumeSB, setTrafficVolumeSB] = useState(68);
-  const [currentVehiclesNB, setCurrentVehiclesNB] = useState(0);
-  const [currentVehiclesSB, setCurrentVehiclesSB] = useState(0);
+  const [, setCurrentVehiclesNB] = useState(0);
+  const [, setCurrentVehiclesSB] = useState(0);
   
   // State for tracking current data index
   const [trafficData, setTrafficData] = useState<TrafficDataPoint[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
-
-  const { pinpoints, activeStudyCase } = useDashboardStore();
 
   // Fetch traffic data on mount
   useEffect(() => {
@@ -475,95 +472,6 @@ const Map: React.FC = () => {
         }
       });
 
-      if (!pinpoints || pinpoints.length === 0) {
-        return;
-      }
-
-      const pinpointsGeoJSON: FeatureCollection<Point, GeoJsonProperties> = {
-        type: 'FeatureCollection',
-        features: pinpoints.map((pinpoint) => ({
-          type: 'Feature',
-          properties: {
-            id: pinpoint.id,
-            name: pinpoint.name,
-            type: pinpoint.type,
-          },
-          geometry: {
-            type: 'Point',
-            coordinates: pinpoint.coordinates,
-          },
-        })),
-      };
-
-      if (!map.current!.getSource('pinpoints')) {
-        map.current!.addSource('pinpoints', {
-          type: 'geojson',
-          data: pinpointsGeoJSON,
-        });
-      }
-
-      if (markersRef.current.size === 0) {
-        pinpoints.forEach((pinpoint) => {
-          const el = document.createElement('div');
-          el.className = 'custom-marker';
-          el.style.width = '40px';
-          el.style.height = '40px';
-          el.style.borderRadius = '50%';
-          el.style.cursor = 'pointer';
-          el.style.display = 'flex';
-          el.style.alignItems = 'center';
-          el.style.justifyContent = 'center';
-          el.style.fontWeight = 'bold';
-          el.style.fontSize = '18px';
-          el.style.transition = 'all 0.3s ease';
-          el.style.border = '3px solid white';
-          el.style.boxShadow = '0 4px 12px rgba(0,0,0,0.3)';
-
-          if (pinpoint.type === 'traffic') {
-            el.style.backgroundColor = '#ef4444';
-            el.innerHTML = '🚗';
-          } else if (pinpoint.type === 'weather') {
-            el.style.backgroundColor = '#3b82f6';
-            el.innerHTML = '🌤️';
-          } else if (pinpoint.type === 'energy') {
-            el.style.backgroundColor = '#22c55e';
-            el.innerHTML = '⚡';
-          }
-
-          const handleClick = (e: Event) => {
-            e.stopPropagation();
-            e.preventDefault();
-            const { activeStudyCase: current, setActiveStudyCase: setState } = useDashboardStore.getState();
-            setState(current === pinpoint.type ? null : pinpoint.type);
-          };
-
-          el.addEventListener('click', handleClick);
-
-          const marker = new mapboxgl.Marker({ element: el, anchor: 'center' })
-            .setLngLat(pinpoint.coordinates)
-            .addTo(map.current!);
-
-          const markerPopup = new mapboxgl.Popup({
-            offset: 25,
-            closeButton: false,
-            maxWidth: '300px'
-          }).setHTML(
-            `<h3 style="margin:0; font-weight:bold;">${pinpoint.name}</h3>
-             <p style="margin:4px 0 0 0; text-transform:capitalize;">${pinpoint.type} Analysis</p>`
-          );
-
-          el.addEventListener('mouseenter', () => {
-            markerPopup.setLngLat(pinpoint.coordinates).addTo(map.current!);
-          });
-
-          el.addEventListener('mouseleave', () => {
-            markerPopup.remove();
-          });
-
-          markersRef.current.set(pinpoint.id, { marker, element: el });
-        });
-      }
-
       let hoveredBuildingId: string | number | null = null;
 
       hoverPopup.current = new mapboxgl.Popup({
@@ -744,7 +652,8 @@ const Map: React.FC = () => {
         map.current = null;
       }
     };
-  }, [pinpoints]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Update road colors when traffic volume changes
   useEffect(() => {
@@ -764,28 +673,6 @@ const Map: React.FC = () => {
       map.current.setPaintProperty('mass-ave-sb-highlight', 'line-color', getTrafficColor(trafficVolumeSB));
     }
   }, [trafficVolumeNB, trafficVolumeSB]);
-
-  // Handle container resize
-  useEffect(() => {
-    if (!map.current || !pinpoints || pinpoints.length === 0) return;
-
-    pinpoints.forEach((pinpoint) => {
-      const markerData = markersRef.current.get(pinpoint.id);
-      if (!markerData) return;
-
-      const { element } = markerData;
-
-      if (activeStudyCase === pinpoint.type) {
-        element.style.transform = 'scale(1.3)';
-        element.style.boxShadow = '0 6px 20px rgba(255,255,255,0.5)';
-        element.style.zIndex = '1000';
-      } else {
-        element.style.transform = 'scale(1)';
-        element.style.boxShadow = '0 4px 12px rgba(0,0,0,0.3)';
-        element.style.zIndex = '1';
-      }
-    });
-  }, [activeStudyCase, pinpoints]);
 
   return (
     <div

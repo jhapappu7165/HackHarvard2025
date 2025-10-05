@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { api } from '@/config/api';
-import type { Building, Insight, DashboardStats, MapData } from '@/types';
+import type { Building, Insight, DashboardStats, MapData, CitySuggestion } from '@/types';
 
 export type StudyCase = 'traffic' | 'weather' | 'energy';
 
@@ -9,7 +9,7 @@ export interface PinpointLocation {
   name: string;
   coordinates: [number, number]; // [lng, lat]
   type: StudyCase;
-  data?: any; // Additional data for the location
+  data?: Record<string, unknown>; // Additional data for the location
 }
 
 export interface StatCard {
@@ -28,13 +28,16 @@ interface DashboardState {
   // Data
   buildings: Building[];
   insights: Insight[];
+  aiSuggestions: CitySuggestion[];
   stats: DashboardStats | null;
   mapData: MapData | null;
+  pinpoints: PinpointLocation[];
   
   // Actions
   setActiveStudyCase: (studyCase: StudyCase | null) => void;
   fetchBuildings: () => Promise<void>;
   fetchInsights: (params?: { priority?: string }) => Promise<void>;
+  fetchAISuggestions: () => Promise<void>;
   fetchStats: () => Promise<void>;
   fetchMapData: () => Promise<void>;
   generateAllData: () => Promise<void>;
@@ -48,8 +51,10 @@ export const useDashboardStore = create<DashboardState>((set, get) => ({
   error: null,
   buildings: [],
   insights: [],
+  aiSuggestions: [],
   stats: null,
   mapData: null,
+  pinpoints: [],
 
   // Actions
   setActiveStudyCase: (studyCase) => set({ activeStudyCase: studyCase }),
@@ -65,12 +70,22 @@ export const useDashboardStore = create<DashboardState>((set, get) => ({
     }
   },
 
-  fetchInsights: async (params) => {
+  fetchInsights: async (params?: { priority?: string }) => {
     try {
       set({ loading: true, error: null });
-      // Use the new AI-powered city suggestions instead of old hardcoded insights
+      const response = await api.insights.getAll(params);
+      set({ insights: response.insights, loading: false });
+    } catch (error) {
+      console.error('Error fetching insights:', error);
+      set({ error: (error as Error).message, loading: false });
+    }
+  },
+
+  fetchAISuggestions: async () => {
+    try {
+      set({ loading: true, error: null });
       const response = await api.insights.getCitySuggestions();
-      set({ insights: response.suggestions, loading: false });
+      set({ aiSuggestions: response.suggestions, loading: false });
     } catch (error) {
       console.error('Error fetching AI suggestions:', error);
       set({ error: (error as Error).message, loading: false });
@@ -122,6 +137,7 @@ export const useDashboardStore = create<DashboardState>((set, get) => ({
       await Promise.all([
         get().fetchBuildings(),
         get().fetchInsights({ priority: 'high' }),
+        get().fetchAISuggestions(),
         get().fetchStats(),
         get().fetchMapData(),
       ]);
