@@ -63,8 +63,8 @@ interface GenerationResults {
 }
 
 export const API_CONFIG = {
-  // Updated to match backend port 5000
-  BASE_URL: import.meta.env.VITE_API_URL || 'http://localhost:5000',
+  // Updated to match backend port 5001
+  BASE_URL: import.meta.env.VITE_API_URL || 'http://localhost:5001',
   ENDPOINTS: {
     // Energy endpoints
     BUILDINGS: '/api/energy/buildings',
@@ -86,7 +86,7 @@ export const API_CONFIG = {
     GENERATE_TRAFFIC: '/api/traffic/generate-data',
 
     // Insights endpoints
-    INSIGHTS: '/api/insights/insights',
+    INSIGHTS: '/api/insights',
     GENERATE_INSIGHTS: '/api/insights/generate-insights',
     BUILDING_INSIGHTS: (id: number) => `/api/insights/insights/building/${id}`,
     INSIGHTS_SUMMARY: '/api/insights/summary',
