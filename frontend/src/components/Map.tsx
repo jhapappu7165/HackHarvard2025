@@ -5,8 +5,25 @@ import MassAveSB from '../assets/MassAveSB.json';
 import MassAveNB from '../assets/MassAveNB.json';
 import type { FeatureCollection, LineString, GeoJsonProperties} from 'geojson';
 
-
 mapboxgl.accessToken = import.meta.env.VITE_MAPBOX_TOKEN as string;
+
+const BUILDINGS_WITH_DATA = [
+  { id: 1, name: 'Central Library', coords: [-71.0779, 42.3493] as [number, number], category: 'Recreation Center', sqft: 63726, year: 1967, usage: 2100, cost: 252000, efficiency: 112.3, co2: 845 },
+  { id: 2, name: 'City Hall', coords: [-71.0914, 42.3655] as [number, number], category: 'Public Safety', sqft: 62766, year: 2014, usage: 2400, cost: 288000, efficiency: 130.2, co2: 966 },
+  { id: 3, name: 'Community Center', coords: [-71.0939, 42.3596] as [number, number], category: 'School', sqft: 45291, year: 1970, usage: 1850, cost: 222000, efficiency: 139.1, co2: 744 },
+  { id: 4, name: 'Fire Station #1', coords: [-71.1163, 42.3766] as [number, number], category: 'School', sqft: 89991, year: 2008, usage: 3200, cost: 384000, efficiency: 121.2, co2: 1288 },
+  { id: 5, name: 'Health Department', coords: [-71.0868, 42.3625] as [number, number], category: 'Public Works', sqft: 36997, year: 2017, usage: 1450, cost: 174000, efficiency: 133.5, co2: 583 },
+  { id: 6, name: 'Municipal Court', coords: [-71.0634, 42.3481] as [number, number], category: 'School', sqft: 24348, year: 1954, usage: 1100, cost: 132000, efficiency: 153.9, co2: 442 },
+  { id: 7, name: 'North High School', coords: [-71.0548, 42.3392] as [number, number], category: 'School', sqft: 10215, year: 1954, usage: 580, cost: 69600, efficiency: 193.3, co2: 233 },
+  { id: 8, name: 'Parks Department', coords: [-71.0720, 42.3580] as [number, number], category: 'Library', sqft: 42149, year: 1957, usage: 1700, cost: 204000, efficiency: 137.3, co2: 684 },
+  { id: 9, name: 'Police Headquarters', coords: [-71.0850, 42.3700] as [number, number], category: 'School', sqft: 49128, year: 2015, usage: 1950, cost: 234000, efficiency: 135.2, co2: 784 },
+  { id: 10, name: 'Public Works Facility', coords: [-71.0680, 42.3520] as [number, number], category: 'Recreation Center', sqft: 9982, year: 2009, usage: 480, cost: 57600, efficiency: 163.8, co2: 193 },
+  { id: 11, name: 'Recreation Center', coords: [-71.0950, 42.3450] as [number, number], category: 'Recreation Center', sqft: 86892, year: 2010, usage: 3100, cost: 372000, efficiency: 121.6, co2: 1247 },
+  { id: 12, name: 'Senior Center', coords: [-71.0600, 42.3550] as [number, number], category: 'Public Safety', sqft: 43638, year: 1961, usage: 1800, cost: 216000, efficiency: 140.6, co2: 724 },
+  { id: 13, name: 'South Elementary', coords: [-71.0800, 42.3400] as [number, number], category: 'School', sqft: 57234, year: 2009, usage: 2200, cost: 264000, efficiency: 130.9, co2: 885 },
+  { id: 14, name: 'Water Treatment Plant', coords: [-71.0500, 42.3650] as [number, number], category: 'Community Center', sqft: 50995, year: 2015, usage: 2050, cost: 246000, efficiency: 136.9, co2: 825 },
+  { id: 15, name: 'Youth Center', coords: [-71.0920, 42.3420] as [number, number], category: 'School', sqft: 86103, year: 1974, usage: 3250, cost: 390000, efficiency: 128.6, co2: 1308 }
+];
 
 interface TrafficDataPoint {
   id: number;
@@ -24,7 +41,6 @@ interface TrafficDataPoint {
   time_period: string;
 }
 
-
 interface WeatherDataPoint {
   id: number;
   weatherType: string;
@@ -34,55 +50,40 @@ interface WeatherDataPoint {
 const Map: React.FC = () => {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<mapboxgl.Map | null>(null);
-  const markersRef = useRef<globalThis.Map<string, { marker: mapboxgl.Marker; element: HTMLDivElement }>>(new globalThis.Map());
-  const hoverPopup = useRef<mapboxgl.Popup | null>(null);
-  const clickPopup = useRef<mapboxgl.Popup | null>(null);
+  const buildingMarkers = useRef<mapboxgl.Marker[]>([]);
   const roadPopupRef = useRef<mapboxgl.Popup | null>(null);
   
-  // Refs to hold current traffic values
   const trafficVolumeNBRef = useRef(35);
   const trafficVolumeSBRef = useRef(68);
   const currentVehiclesNBRef = useRef(0);
   const currentVehiclesSBRef = useRef(0);
 
-  // Traffic volume state (0-100) - will be calculated from actual data
   const [trafficVolumeNB, setTrafficVolumeNB] = useState(35);
   const [trafficVolumeSB, setTrafficVolumeSB] = useState(68);
   const [, setCurrentVehiclesNB] = useState(0);
   const [, setCurrentVehiclesSB] = useState(0);
-
-  // Weather state
-const [weatherData, setWeatherData] = useState<WeatherDataPoint[]>([]);
-const [currentWeatherIndex, setCurrentWeatherIndex] = useState(0);
-const [showAlert, setShowAlert] = useState(false);
-const [alertMessage, setAlertMessage] = useState('');
-  
-  // State for tracking current data index
+  const [weatherData, setWeatherData] = useState<WeatherDataPoint[]>([]);
+  const [currentWeatherIndex, setCurrentWeatherIndex] = useState(0);
+  const [showAlert, setShowAlert] = useState(false);
+  const [alertMessage, setAlertMessage] = useState('');
   const [trafficData, setTrafficData] = useState<TrafficDataPoint[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
-
   const [lastAlertSent, setLastAlertSent] = useState<number>(0);
 
   const sendPoopAlert = async (alertMessage: string, weatherType: string) => {
     const now = Date.now();
-    if (now - lastAlertSent < 10000) { // 10 seconds in milliseconds
+    if (now - lastAlertSent < 10000) {
       console.log('Skipping email - sent too recently');
       return;
     }
-    
     setLastAlertSent(now);
-    
     try {
-      // Replace these with actual user data from your auth/user store
-      const userId = '27'; // TODO: Get from your auth context/store
-      const userEmail = 'aabmtho12@gmail.com'; // TODO: Get from your auth context/store
-      const userName = 'Allen'; // TODO: Get from your auth context/store
-      
+      const userId = '27';
+      const userEmail = 'aabmtho12@gmail.com';
+      const userName = 'Allen';
       const response = await fetch('http://localhost:5001/api/sim/poop-alert', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           user_id: userId,
           user_email: userEmail,
@@ -91,7 +92,6 @@ const [alertMessage, setAlertMessage] = useState('');
           custom_message: alertMessage
         })
       });
-      
       const data = await response.json();
       console.log('Alert email result:', data);
     } catch (error) {
@@ -99,127 +99,106 @@ const [alertMessage, setAlertMessage] = useState('');
     }
   };
 
-  // Fetch traffic data on mount
-// Fetch traffic data on mount
-useEffect(() => {
-  const fetchTrafficData = async () => {
-    try {
-      const response = await fetch('http://localhost:5001/api/traffic/directional?intersection_id=31&limit=24');
-      const result = await response.json();
-      
-      if (result.success && result.data) {
-        setTrafficData(result.data);
-        console.log(`Loaded ${result.data.length} traffic data points`);
+  useEffect(() => {
+    const fetchTrafficData = async () => {
+      try {
+        const response = await fetch('http://localhost:5001/api/traffic/directional?intersection_id=31&limit=24');
+        const result = await response.json();
+        if (result.success && result.data) {
+          setTrafficData(result.data);
+          console.log(`Loaded ${result.data.length} traffic data points`);
+        }
+      } catch (error) {
+        console.error('Error fetching traffic data:', error);
       }
-    } catch (error) {
-      console.error('Error fetching traffic data:', error);
-    }
-  };
+    };
 
-  const fetchWeatherData = async () => {
-    try {
-      const response = await fetch('http://localhost:5001/api/sim/weather');
-      const result = await response.json();
-      
-      if (result.success && result.data) {
-        setWeatherData(result.data);
-        console.log(`Loaded ${result.data.length} weather data points`);
+    const fetchWeatherData = async () => {
+      try {
+        const response = await fetch('http://localhost:5001/api/sim/weather');
+        const result = await response.json();
+        if (result.success && result.data) {
+          setWeatherData(result.data);
+          console.log(`Loaded ${result.data.length} weather data points`);
+        }
+      } catch (error) {
+        console.error('Error fetching weather data:', error);
       }
-    } catch (error) {
-      console.error('Error fetching weather data:', error);
-    }
-  };
+    };
 
-  fetchTrafficData();
-  fetchWeatherData();
-}, []);
+    fetchTrafficData();
+    fetchWeatherData();
+  }, []);
 
-  // Update traffic volumes every 3 seconds and cycle through data
   useEffect(() => {
     if (trafficData.length === 0) return;
 
     const interval = setInterval(() => {
       const currentData = trafficData[currentIndex];
-      
-      // Calculate northbound total
       const nbTotal = currentData.northbound_left + currentData.northbound_thru + currentData.northbound_right;
-      
-      // Calculate southbound total
       const sbTotal = currentData.southbound_left + currentData.southbound_thru + currentData.southbound_right;
       
-      // Store actual vehicle counts
       setCurrentVehiclesNB(nbTotal);
       setCurrentVehiclesSB(sbTotal);
-      
-      // Update refs
       currentVehiclesNBRef.current = nbTotal;
       currentVehiclesSBRef.current = sbTotal;
       
-      // Normalize to 0-100 scale (assuming max ~400 vehicles per direction)
       const nbVolume = Math.min(100, Math.round((nbTotal / 400) * 100));
       const sbVolume = Math.min(100, Math.round((sbTotal / 400) * 100));
       
       setTrafficVolumeNB(nbVolume);
       setTrafficVolumeSB(sbVolume);
-      
-      // Update refs
       trafficVolumeNBRef.current = nbVolume;
       trafficVolumeSBRef.current = sbVolume;
       
-      console.log(`Time: ${currentData.reading_timestamp}, NB: ${nbTotal} (${nbVolume}%), SB: ${sbTotal} (${sbVolume}%)`);
-      
-      // Move to next data point, loop back to start if at end
       setCurrentIndex((prevIndex) => (prevIndex + 1) % trafficData.length);
     }, 3000);
 
     return () => clearInterval(interval);
   }, [trafficData, currentIndex]);
-// Check for weather alerts
-useEffect(() => {
-  if (weatherData.length === 0) return;
 
-  const currentWeather = weatherData[currentWeatherIndex];
-  const weatherType = currentWeather.weatherType;
-  const nbVolume = trafficVolumeNB;
-  const sbVolume = trafficVolumeSB;
-  const maxVolume = Math.max(nbVolume, sbVolume);
+  useEffect(() => {
+    if (weatherData.length === 0) return;
 
-  let alert = '';
+    const currentWeather = weatherData[currentWeatherIndex];
+    const weatherType = currentWeather.weatherType;
+    const nbVolume = trafficVolumeNB;
+    const sbVolume = trafficVolumeSB;
+    const maxVolume = Math.max(nbVolume, sbVolume);
 
-  if (weatherType === 'Rainy' && maxVolume > 65) {
-    const roadDirection = nbVolume > sbVolume ? 'Northbound' : 'Southbound';
-    alert = `ALERT! Many drivers on the road in dangerous conditions, possible flooding. Massachusetts Ave ${roadDirection} is at ${maxVolume}% capacity`;
-  } else if (weatherType === 'Thunder Storm' && maxVolume > 35) {
-    const roadDirection = nbVolume > sbVolume ? 'Northbound' : 'Southbound';
-    alert = `ALERT! Many drivers on the road in dangerous conditions, possible flooding. Massachusetts Ave ${roadDirection} is at ${maxVolume}% capacity`;
-  } else if (weatherType === 'Ice' && maxVolume > 15) {
-    alert = `ALERT! The road is at ${maxVolume}% capacity and it is ICY!!`;
-  }
-  
+    let alert = '';
 
-  if (alert) {
-    setAlertMessage(alert);
-    setShowAlert(true);
-    sendPoopAlert(alert, weatherType);
-  } else {
-    setShowAlert(false);
-  }
-// eslint-disable-next-line react-hooks/exhaustive-deps
-}, [weatherData, currentWeatherIndex, trafficVolumeNB, trafficVolumeSB]);
-
-// Keyboard handler for 'o' key to cycle weather
-useEffect(() => {
-  const handleKeyPress = (e: KeyboardEvent) => {
-    if (e.key === 'o' || e.key === 'O') {
-      setCurrentWeatherIndex((prevIndex) => (prevIndex + 1) % weatherData.length);
-      console.log('Weather cycled to index:', (currentWeatherIndex + 1) % weatherData.length);
+    if (weatherType === 'Rainy' && maxVolume > 65) {
+      const roadDirection = nbVolume > sbVolume ? 'Northbound' : 'Southbound';
+      alert = `ALERT! Many drivers on the road in dangerous conditions, possible flooding. Massachusetts Ave ${roadDirection} is at ${maxVolume}% capacity`;
+    } else if (weatherType === 'Thunder Storm' && maxVolume > 35) {
+      const roadDirection = nbVolume > sbVolume ? 'Northbound' : 'Southbound';
+      alert = `ALERT! Many drivers on the road in dangerous conditions, possible flooding. Massachusetts Ave ${roadDirection} is at ${maxVolume}% capacity`;
+    } else if (weatherType === 'Ice' && maxVolume > 15) {
+      alert = `ALERT! The road is at ${maxVolume}% capacity and it is ICY!!`;
     }
-  };
 
-  window.addEventListener('keydown', handleKeyPress);
-  return () => window.removeEventListener('keydown', handleKeyPress);
-}, [weatherData.length, currentWeatherIndex]);
-  // Function to get color based on traffic volume (0-100)
+    if (alert) {
+      setAlertMessage(alert);
+      setShowAlert(true);
+      sendPoopAlert(alert, weatherType);
+    } else {
+      setShowAlert(false);
+    }
+  }, [weatherData, currentWeatherIndex, trafficVolumeNB, trafficVolumeSB]);
+
+  useEffect(() => {
+    const handleKeyPress = (e: KeyboardEvent) => {
+      if (e.key === 'p' || e.key === 'P') {
+        setCurrentWeatherIndex((prevIndex) => (prevIndex + 1) % weatherData.length);
+        console.log('Weather cycled to index:', (currentWeatherIndex + 1) % weatherData.length);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyPress);
+    return () => window.removeEventListener('keydown', handleKeyPress);
+  }, [weatherData.length, currentWeatherIndex]);
+
   const getTrafficColor = (volume: number): string => {
     if (volume <= 33) {
       const ratio = volume / 33;
@@ -242,552 +221,185 @@ useEffect(() => {
     }
   };
 
-  // Initialize map
   useEffect(() => {
     if (map.current) return;
-
-    if (!mapboxgl.supported()) {
-      console.error('Your browser does not support Mapbox GL');
-      return;
-    }
-
-    if (!mapContainer.current) {
-      console.error('Map container ref missing');
-      return;
-    }
-
-    if (!mapboxgl.accessToken || !mapboxgl.accessToken.startsWith('pk.')) {
-      console.error('Missing or invalid Mapbox public token');
-      return;
-    }
-
-    console.log('Initializing map...');
+    if (!mapContainer.current) return;
 
     map.current = new mapboxgl.Map({
       container: mapContainer.current,
       style: 'mapbox://styles/mapbox/dark-v11',
-      center: [-71.0565, 42.3555],
-      zoom: 12,
-      pitch: 60,
-      bearing: -17.5,
-      antialias: true,
+      center: [-71.0789, 42.3656],
+      zoom: 13,
+      pitch: 45,
+      bearing: -17.6,
     });
 
-    map.current.addControl(new mapboxgl.NavigationControl({
-      visualizePitch: true
-    }), 'top-right');
+    map.current.addControl(new mapboxgl.NavigationControl(), 'top-right');
 
     map.current.on('load', () => {
-      console.info('===== Map loaded successfully =====');
+      if (!map.current) return;
 
-      map.current!.addSource('mapbox-dem', {
+      map.current.addSource('mapbox-dem', {
         type: 'raster-dem',
         url: 'mapbox://mapbox.mapbox-terrain-dem-v1',
         tileSize: 512,
         maxzoom: 14,
       });
+      map.current.setTerrain({ source: 'mapbox-dem', exaggeration: 1.5 });
 
-      map.current!.setTerrain({ source: 'mapbox-dem', exaggeration: 1.5 });
+      BUILDINGS_WITH_DATA.forEach(building => {
+        if (!map.current) return;
 
-      map.current!.addLayer({
-        id: 'sky',
-        type: 'sky',
+        const el = document.createElement('div');
+        el.style.width = '24px';
+        el.style.height = '24px';
+        el.style.borderRadius = '50%';
+        el.style.backgroundColor = '#22c55e';
+        el.style.border = '3px solid #fff';
+        el.style.cursor = 'pointer';
+        el.style.boxShadow = '0 0 15px rgba(34, 197, 94, 0.8)';
+
+        const popup = new mapboxgl.Popup({ 
+          offset: 25,
+          closeButton: true,
+          closeOnClick: true,
+          maxWidth: '320px'
+        }).setHTML(`
+          <div style="padding: 14px; background: #1f2937; color: #fff; font-family: system-ui, -apple-system, sans-serif;">
+            <h3 style="margin: 0 0 10px 0; color: #22c55e; font-size: 17px; font-weight: 700;">${building.name}</h3>
+            <p style="margin: 0 0 12px 0; font-size: 13px; color: #9ca3af;">
+              <strong style="color: #fff;">${building.category}</strong> • Built ${building.year}
+            </p>
+            <hr style="border: none; border-top: 1px solid #374151; margin: 10px 0;">
+            <div style="font-size: 12px; line-height: 1.6;">
+              <div style="display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid #374151;">
+                <span style="color: #9ca3af;">Square Feet:</span>
+                <strong style="color: #fff;">${building.sqft.toLocaleString()}</strong>
+              </div>
+              <div style="display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid #374151;">
+                <span style="color: #9ca3af;">Annual Usage:</span>
+                <strong style="color: #22c55e;">${building.usage.toLocaleString()} MWh/yr</strong>
+              </div>
+              <div style="display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid #374151;">
+                <span style="color: #9ca3af;">Annual Cost:</span>
+                <strong style="color: #fbbf24;">$${building.cost.toLocaleString()}</strong>
+              </div>
+              <div style="display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid #374151;">
+                <span style="color: #9ca3af;">CO2 Emissions:</span>
+                <strong style="color: #f59e0b;">${building.co2.toLocaleString()} tons/yr</strong>
+              </div>
+              <div style="display: flex; justify-content: space-between; padding: 6px 0;">
+                <span style="color: #9ca3af;">Energy Intensity:</span>
+                <strong style="color: #a78bfa;">${building.efficiency.toFixed(1)} kBTU/sf</strong>
+              </div>
+            </div>
+          </div>
+        `);
+
+        const marker = new mapboxgl.Marker(el)
+          .setLngLat(building.coords)
+          .setPopup(popup)
+          .addTo(map.current);
+
+        buildingMarkers.current.push(marker);
+      });
+
+      map.current.addSource('mass-ave-nb', {
+        type: 'geojson',
+        data: MassAveNB as FeatureCollection<LineString, GeoJsonProperties>
+      });
+
+      map.current.addLayer({
+        id: 'mass-ave-nb-line',
+        type: 'line',
+        source: 'mass-ave-nb',
         paint: {
-          'sky-type': 'atmosphere',
-          'sky-atmosphere-sun': [0.0, 90.0],
-          'sky-atmosphere-sun-intensity': 15,
+          'line-color': getTrafficColor(trafficVolumeNB),
+          'line-width': 6,
+          'line-opacity': 0.8,
         },
       });
-    });
 
-    map.current.on('style.load', () => {
-      console.log('===== Style loaded, adding 3D buildings... =====');
-      
-      // Debug: Log current zoom level
-      console.log('Current zoom level:', map.current!.getZoom());
+      map.current.addSource('mass-ave-sb', {
+        type: 'geojson',
+        data: MassAveSB as FeatureCollection<LineString, GeoJsonProperties>
+      });
 
-      const layers = map.current!.getStyle().layers;
-      let labelLayerId: string | undefined;
+      map.current.addLayer({
+        id: 'mass-ave-sb-line',
+        type: 'line',
+        source: 'mass-ave-sb',
+        paint: {
+          'line-color': getTrafficColor(trafficVolumeSB),
+          'line-width': 6,
+          'line-opacity': 0.8,
+        },
+      });
 
-      for (const layer of layers || []) {
-        if (layer.type === 'symbol' && layer.layout && layer.layout['text-field']) {
-          labelLayerId = layer.id;
-          break;
-        }
-      }
-
-      if (!map.current!.getLayer('3d-buildings')) {
-        map.current!.addLayer(
-          {
-            id: '3d-buildings',
-            source: 'composite',
-            'source-layer': 'building',
-            filter: ['==', 'extrude', 'true'],
-            type: 'fill-extrusion',
-            minzoom: 12,  // Changed from 14 to match initial zoom
-            paint: {
-              'fill-extrusion-color': [
-                'case',
-                ['boolean', ['feature-state', 'hover'], false],
-                '#fbbf24',
-                [
-                  'interpolate',
-                  ['linear'],
-                  ['get', 'height'],
-                  0, '#6b7280',
-                  50, '#4b5563',
-                  100, '#374151',
-                  200, '#1f2937'
-                ]
-              ],
-              'fill-extrusion-height': [
-                'interpolate',
-                ['linear'],
-                ['zoom'],
-                14, 0,
-                14.05, ['get', 'height']
-              ],
-              'fill-extrusion-base': [
-                'interpolate',
-                ['linear'],
-                ['zoom'],
-                14, 0,
-                14.05, ['get', 'min_height']
-              ],
-              'fill-extrusion-opacity': 0.85,
-            },
-          },
-          labelLayerId
-        );
-        console.log('3D buildings layer added');
-        
-        // Debug: Verify layer was added
-        setTimeout(() => {
-          console.log('Layer check:', map.current!.getLayer('3d-buildings'));
-          console.log('All layers:', map.current!.getStyle().layers?.map(l => l.id));
-        }, 1000);
-      }
-
-      if (!map.current!.getSource('mass-ave-nb')) {
-        map.current!.addSource('mass-ave-nb', {
-          type: 'geojson',
-          data: MassAveNB as FeatureCollection<LineString, GeoJsonProperties>
-        });
-
-        map.current!.addLayer({
-          id: 'mass-ave-nb-glow',
-          type: 'line',
-          source: 'mass-ave-nb',
-          layout: { 'line-join': 'round', 'line-cap': 'round' },
-          paint: {
-            'line-color': getTrafficColor(trafficVolumeNB),
-            'line-width': 8,
-            'line-opacity': 0.4,
-            'line-blur': 4,
-          },
-        });
-
-        map.current!.addLayer({
-          id: 'mass-ave-nb-highlight',
-          type: 'line',
-          source: 'mass-ave-nb',
-          layout: { 'line-join': 'round', 'line-cap': 'round' },
-          paint: {
-            'line-color': getTrafficColor(trafficVolumeNB),
-            'line-width': 4,
-            'line-opacity': 0.8,
-          },
-        });
-      }
-
-      if (!map.current!.getSource('mass-ave-sb')) {
-        map.current!.addSource('mass-ave-sb', {
-          type: 'geojson',
-          data: MassAveSB as FeatureCollection<LineString, GeoJsonProperties>
-        });
-
-        map.current!.addLayer({
-          id: 'mass-ave-sb-glow',
-          type: 'line',
-          source: 'mass-ave-sb',
-          layout: { 'line-join': 'round', 'line-cap': 'round' },
-          paint: {
-            'line-color': getTrafficColor(trafficVolumeSB),
-            'line-width': 8,
-            'line-opacity': 0.4,
-            'line-blur': 4,
-          },
-        });
-
-        map.current!.addLayer({
-          id: 'mass-ave-sb-highlight',
-          type: 'line',
-          source: 'mass-ave-sb',
-          layout: { 'line-join': 'round', 'line-cap': 'round' },
-          paint: {
-            'line-color': getTrafficColor(trafficVolumeSB),
-            'line-width': 4,
-            'line-opacity': 0.8,
-          },
-        });
-      }
-
-      // Road hover popups
       roadPopupRef.current = new mapboxgl.Popup({
         closeButton: false,
         closeOnClick: false,
       });
-      
-      console.log('Setting up click handlers...');
 
-      // Northbound road hover
-      const updateNBPopup = (e: mapboxgl.MapMouseEvent) => {
-        map.current!.getCanvas().style.cursor = 'pointer';
+      map.current.on('mouseenter', 'mass-ave-nb-line', (e) => {
+        if (!map.current) return;
+        map.current.getCanvas().style.cursor = 'pointer';
+        roadPopupRef.current!.setLngLat(e.lngLat).setHTML(`
+          <div style="padding: 6px;">
+            <strong>Mass Ave NB</strong><br>
+            ${currentVehiclesNBRef.current} vehicles (${trafficVolumeNBRef.current}%)
+          </div>
+        `).addTo(map.current);
+      });
 
-        roadPopupRef.current!
-          .setLngLat(e.lngLat)
-          .setHTML(`
-            <div style="padding: 8px; font-family: system-ui, -apple-system, sans-serif;">
-              <h4 style="margin: 0 0 4px 0; font-weight: 600; color: #fff;">Massachusetts Ave Northbound</h4>
-              <p style="margin: 0; font-size: 12px; color: #d1d5db;">Traffic Volume: <strong style="color: ${getTrafficColor(trafficVolumeNBRef.current)}">${currentVehiclesNBRef.current} vehicles (${trafficVolumeNBRef.current}%)</strong></p>
-            </div>
-          `)
-          .addTo(map.current!);
-      };
-      
-      map.current!.on('mouseenter', 'mass-ave-nb-highlight', updateNBPopup);
-
-      map.current!.on('mouseleave', 'mass-ave-nb-highlight', () => {
-        map.current!.getCanvas().style.cursor = '';
+      map.current.on('mouseleave', 'mass-ave-nb-line', () => {
+        if (!map.current) return;
+        map.current.getCanvas().style.cursor = '';
         roadPopupRef.current!.remove();
       });
 
-      // Southbound road hover
-      const updateSBPopup = (e: mapboxgl.MapMouseEvent) => {
-        map.current!.getCanvas().style.cursor = 'pointer';
+      map.current.on('mouseenter', 'mass-ave-sb-line', (e) => {
+        if (!map.current) return;
+        map.current.getCanvas().style.cursor = 'pointer';
+        roadPopupRef.current!.setLngLat(e.lngLat).setHTML(`
+          <div style="padding: 6px;">
+            <strong>Mass Ave SB</strong><br>
+            ${currentVehiclesSBRef.current} vehicles (${trafficVolumeSBRef.current}%)
+          </div>
+        `).addTo(map.current);
+      });
 
-        roadPopupRef.current!
-          .setLngLat(e.lngLat)
-          .setHTML(`
-            <div style="padding: 8px; font-family: system-ui, -apple-system, sans-serif;">
-              <h4 style="margin: 0 0 4px 0; font-weight: 600; color: #fff;">Massachusetts Ave Southbound</h4>
-              <p style="margin: 0; font-size: 12px; color: #d1d5db;">Traffic Volume: <strong style="color: ${getTrafficColor(trafficVolumeSBRef.current)}">${currentVehiclesSBRef.current} vehicles (${trafficVolumeSBRef.current}%)</strong></p>
-            </div>
-          `)
-          .addTo(map.current!);
-      };
-      
-      map.current!.on('mouseenter', 'mass-ave-sb-highlight', updateSBPopup);
-
-      map.current!.on('mouseleave', 'mass-ave-sb-highlight', () => {
-        map.current!.getCanvas().style.cursor = '';
+      map.current.on('mouseleave', 'mass-ave-sb-line', () => {
+        if (!map.current) return;
+        map.current.getCanvas().style.cursor = '';
         roadPopupRef.current!.remove();
       });
-      
-      // Add general map click handler here, after all layers are set up
-      console.log('Setting up click handlers...');
-      console.log('Map object exists:', !!map.current);
-      
-      map.current!.on('click', (e) => {
-        console.log('===== MAP CLICK EVENT FIRED =====');
-        console.log('Map clicked at:', e.lngLat);
-        console.log('Click point pixel coordinates:', e.point);
-        
-        // Check for buildings first
-        const buildingFeatures = map.current!.queryRenderedFeatures(e.point, {
-          layers: ['3d-buildings']
-        });
-        console.log('Buildings at click point:', buildingFeatures.length);
-        
-        if (buildingFeatures.length > 0) {
-          console.log('Building features:', buildingFeatures);
-
-          const feature = buildingFeatures[0];
-          const properties = feature.properties;
-
-          const buildingInfo = {
-            name: properties?.name || 'Unnamed Building',
-            height: properties?.height || 'N/A',
-            type: properties?.type || 'Commercial',
-            underground: properties?.underground || 'No',
-            minHeight: properties?.min_height || 0,
-          };
-
-          console.log('Building clicked:', buildingInfo);
-
-          if (clickPopup.current) {
-            clickPopup.current.remove();
-          }
-
-          clickPopup.current = new mapboxgl.Popup({
-            offset: 25,
-            closeButton: true,
-            closeOnClick: true,
-            closeOnMove: false,
-            maxWidth: '280px',
-            className: 'building-details-popup'
-          })
-            .setLngLat(e.lngLat)
-            .setHTML(
-              `<div style="padding: 12px; font-family: system-ui, -apple-system, sans-serif;">
-                <div style="border-bottom: 1px solid #fbbf24; padding-bottom: 8px; margin-bottom: 12px;">
-                  <h3 style="margin:0; font-weight:600; font-size:16px; color: #fff;">
-                    ${buildingInfo.name}
-                  </h3>
-                  <p style="margin:2px 0 0 0; font-size:11px; color: #9ca3af;">
-                    ${buildingInfo.type}
-                  </p>
-                </div>
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px;">
-                  <div style="background: rgba(251, 191, 36, 0.1); padding: 8px; border-radius: 4px; border-left: 2px solid #fbbf24;">
-                    <p style="margin:0; font-size:10px; color: #9ca3af; text-transform: uppercase;">Height</p>
-                    <p style="margin:2px 0 0 0; font-size:14px; font-weight:600; color: #fbbf24;">${buildingInfo.height}m</p>
-                  </div>
-                  <div style="background: rgba(34, 197, 94, 0.1); padding: 8px; border-radius: 4px; border-left: 2px solid #22c55e;">
-                    <p style="margin:0; font-size:10px; color: #9ca3af; text-transform: uppercase;">Energy</p>
-                    <p style="margin:2px 0 0 0; font-size:14px; font-weight:600; color: #22c55e;">87.3%</p>
-                  </div>
-                </div>
-                <div style="font-size:11px; color: #d1d5db; margin-bottom: 12px;">
-                  <div style="display: flex; justify-content: space-between; padding: 4px 0;">
-                    <span>Consumption:</span>
-                    <strong style="color: #22c55e;">124.5 MWh/yr</strong>
-                  </div>
-                  <div style="display: flex; justify-content: space-between; padding: 4px 0;">
-                    <span>CO₂ Emissions:</span>
-                    <strong style="color: #f59e0b;">48.2 tons/yr</strong>
-                  </div>
-                </div>
-                <button 
-                  onclick="console.log('View analytics for: ${buildingInfo.name}')" 
-                  style="width: 100%; padding: 8px; background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%); color: #000; border: none; border-radius: 4px; cursor: pointer; font-weight: 600; font-size: 12px; transition: transform 0.2s;"
-                  onmouseover="this.style.transform='scale(1.02)'"
-                  onmouseout="this.style.transform='scale(1)'"
-                >
-                  View Details
-                </button>
-              </div>`
-            )
-            .addTo(map.current!);
-
-          clickPopup.current.on('close', () => {
-            // Popup closed
-          });
-          
-          return; // Stop here, don't close popup
-        }
-
-        // Only close popup if we didn't click on a building
-        if (clickPopup.current) {
-          clickPopup.current.remove();
-        }
-      });
-
-      let hoveredBuildingId: string | number | null = null;
-
-      hoverPopup.current = new mapboxgl.Popup({
-        closeButton: false,
-        closeOnClick: false,
-      });
-
-      map.current!.on('mousemove', '3d-buildings', (e) => {
-        console.log('Mouse moving over buildings!'); // Debug
-        map.current!.getCanvas().style.cursor = 'pointer';
-
-        if (e.features && e.features.length > 0) {
-          if (hoveredBuildingId !== null) {
-            map.current!.setFeatureState(
-              { source: 'composite', sourceLayer: 'building', id: hoveredBuildingId },
-              { hover: false }
-            );
-          }
-
-          hoveredBuildingId = e.features[0].id as string | number;
-
-          map.current!.setFeatureState(
-            { source: 'composite', sourceLayer: 'building', id: hoveredBuildingId },
-            { hover: true }
-          );
-
-          const properties = e.features[0].properties;
-          const height = properties?.height || 'Unknown';
-          const name = properties?.name || 'Building';
-
-          const coordinates = e.lngLat;
-          const description = `
-            <div style="padding: 8px;">
-              <h3 style="margin:0 0 8px 0; font-weight:bold; font-size:14px;">${name}</h3>
-              <p style="margin:0; font-size:12px;"><strong>Height:</strong> ${height}m</p>
-              <p style="margin:4px 0 0 0; font-size:11px; color:#888;">Click for details</p>
-            </div>
-          `;
-
-          hoverPopup.current!.setLngLat(coordinates).setHTML(description).addTo(map.current!);
-        }
-      });
-
-      map.current!.on('mouseleave', '3d-buildings', () => {
-        map.current!.getCanvas().style.cursor = '';
-
-        if (hoveredBuildingId !== null) {
-          map.current!.setFeatureState(
-            { source: 'composite', sourceLayer: 'building', id: hoveredBuildingId },
-            { hover: false }
-          );
-        }
-        hoveredBuildingId = null;
-        hoverPopup.current!.remove();
-      });
-
-      map.current!.on('click', (e) => {
-        console.log('===== MAP CLICK EVENT FIRED =====');
-        console.log('Map clicked at:', e.lngLat);
-        console.log('Click point pixel coordinates:', e.point);
-        
-        // Check for buildings first
-        const buildingFeatures = map.current!.queryRenderedFeatures(e.point, {
-          layers: ['3d-buildings']
-        });
-        console.log('Buildings at click point:', buildingFeatures.length);
-        
-        if (buildingFeatures.length > 0) {
-          console.log('Building features:', buildingFeatures);
-
-        // If we clicked on a building, handle it and stop
-        if (buildingFeatures.length > 0) {
-          const feature = buildingFeatures[0];
-          const properties = feature.properties;
-
-          const buildingInfo = {
-            name: properties?.name || 'Unnamed Building',
-            height: properties?.height || 'N/A',
-            type: properties?.type || 'Commercial',
-            underground: properties?.underground || 'No',
-            minHeight: properties?.min_height || 0,
-          };
-
-          console.log('Building clicked:', buildingInfo);
-
-          if (clickPopup.current) {
-            clickPopup.current.remove();
-          }
-
-          clickPopup.current = new mapboxgl.Popup({
-            offset: 25,
-            closeButton: true,
-            closeOnClick: true,
-            closeOnMove: false,
-            maxWidth: '280px',
-            className: 'building-details-popup'
-          })
-            .setLngLat(e.lngLat)
-            .setHTML(
-              `<div style="padding: 12px; font-family: system-ui, -apple-system, sans-serif;">
-                <div style="border-bottom: 1px solid #fbbf24; padding-bottom: 8px; margin-bottom: 12px;">
-                  <h3 style="margin:0; font-weight:600; font-size:16px; color: #fff;">
-                    ${buildingInfo.name}
-                  </h3>
-                  <p style="margin:2px 0 0 0; font-size:11px; color: #9ca3af;">
-                    ${buildingInfo.type}
-                  </p>
-                </div>
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px;">
-                  <div style="background: rgba(251, 191, 36, 0.1); padding: 8px; border-radius: 4px; border-left: 2px solid #fbbf24;">
-                    <p style="margin:0; font-size:10px; color: #9ca3af; text-transform: uppercase;">Height</p>
-                    <p style="margin:2px 0 0 0; font-size:14px; font-weight:600; color: #fbbf24;">${buildingInfo.height}m</p>
-                  </div>
-                  <div style="background: rgba(34, 197, 94, 0.1); padding: 8px; border-radius: 4px; border-left: 2px solid #22c55e;">
-                    <p style="margin:0; font-size:10px; color: #9ca3af; text-transform: uppercase;">Energy</p>
-                    <p style="margin:2px 0 0 0; font-size:14px; font-weight:600; color: #22c55e;">87.3%</p>
-                  </div>
-                </div>
-                <div style="font-size:11px; color: #d1d5db; margin-bottom: 12px;">
-                  <div style="display: flex; justify-content: space-between; padding: 4px 0;">
-                    <span>Consumption:</span>
-                    <strong style="color: #22c55e;">124.5 MWh/yr</strong>
-                  </div>
-                  <div style="display: flex; justify-content: space-between; padding: 4px 0;">
-                    <span>CO₂ Emissions:</span>
-                    <strong style="color: #f59e0b;">48.2 tons/yr</strong>
-                  </div>
-                </div>
-                <button 
-                  onclick="console.log('View analytics for: ${buildingInfo.name}')" 
-                  style="width: 100%; padding: 8px; background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%); color: #000; border: none; border-radius: 4px; cursor: pointer; font-weight: 600; font-size: 12px; transition: transform 0.2s;"
-                  onmouseover="this.style.transform='scale(1.02)'"
-                  onmouseout="this.style.transform='scale(1)'"
-                >
-                  View Details
-                </button>
-              </div>`
-            )
-            .addTo(map.current!);
-
-          clickPopup.current.on('close', () => {
-            // Popup closed
-          });
-          
-          return; // Stop here, don't close popup
-        }
-
-        // Only close popup if we didn't click on a building
-        if (clickPopup.current) {
-          clickPopup.current.remove();
-        }}
-      });
     });
-
-    map.current.on('error', (e) => {
-      console.error('===== MAP ERROR =====', e);
-    });
-
-    const markersForCleanup = markersRef.current;
-    const hoverPopupForCleanup = hoverPopup.current;
-    const clickPopupForCleanup = clickPopup.current;
-    const roadPopupForCleanup = roadPopupRef.current;
 
     return () => {
-      markersForCleanup.forEach(({ marker }) => marker.remove());
-      markersForCleanup.clear();
-      if (hoverPopupForCleanup) {
-        hoverPopupForCleanup.remove();
-      }
-      if (clickPopupForCleanup) {
-        clickPopupForCleanup.remove();
-      }
-      if (roadPopupForCleanup) {
-        roadPopupForCleanup.remove();
-      }
+      buildingMarkers.current.forEach(m => m.remove());
+      buildingMarkers.current = [];
+      if (roadPopupRef.current) roadPopupRef.current.remove();
       if (map.current) {
         map.current.remove();
         map.current = null;
       }
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Update road colors when traffic volume changes
   useEffect(() => {
-    if (!map.current) return;
-
-    if (map.current.getLayer('mass-ave-nb-glow')) {
-      map.current.setPaintProperty('mass-ave-nb-glow', 'line-color', getTrafficColor(trafficVolumeNB));
+    if (!map.current || !map.current.isStyleLoaded()) return;
+    
+    if (map.current.getLayer('mass-ave-nb-line')) {
+      map.current.setPaintProperty('mass-ave-nb-line', 'line-color', getTrafficColor(trafficVolumeNB));
     }
-    if (map.current.getLayer('mass-ave-nb-highlight')) {
-      map.current.setPaintProperty('mass-ave-nb-highlight', 'line-color', getTrafficColor(trafficVolumeNB));
-    }
-
-    if (map.current.getLayer('mass-ave-sb-glow')) {
-      map.current.setPaintProperty('mass-ave-sb-glow', 'line-color', getTrafficColor(trafficVolumeSB));
-    }
-    if (map.current.getLayer('mass-ave-sb-highlight')) {
-      map.current.setPaintProperty('mass-ave-sb-highlight', 'line-color', getTrafficColor(trafficVolumeSB));
+    if (map.current.getLayer('mass-ave-sb-line')) {
+      map.current.setPaintProperty('mass-ave-sb-line', 'line-color', getTrafficColor(trafficVolumeSB));
     }
   }, [trafficVolumeNB, trafficVolumeSB]);
 
   return (
     <div style={{ position: 'relative', width: '100%', height: 400 }}>
-      {/* Weather Display Box */}
       {weatherData.length > 0 && (
         <div style={{
           position: 'absolute',
@@ -807,7 +419,6 @@ useEffect(() => {
         </div>
       )}
   
-      {/* Alert Popup */}
       {showAlert && (
         <div style={{
           position: 'absolute',
@@ -826,7 +437,7 @@ useEffect(() => {
           border: '2px solid #fff',
           boxShadow: '0 8px 32px rgba(0, 0, 0, 0.4)',
         }}>
-          <div style={{ fontSize: '24px', marginBottom: '8px' }}>⚠️</div>
+          <div style={{ fontSize: '24px', marginBottom: '8px' }}>WARNING</div>
           {alertMessage}
           <button
             onClick={() => setShowAlert(false)}
@@ -853,11 +464,7 @@ useEffect(() => {
           width: '100%',
           height: 400,
           borderRadius: '8px',
-          position: 'relative',
-          zIndex: 1,
         }}
-        className="map-container"
-        onClick={() => console.log('DIV CLICKED')}
       />
     </div>
   );
