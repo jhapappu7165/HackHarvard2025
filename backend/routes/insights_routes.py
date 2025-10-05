@@ -265,11 +265,12 @@ def generate_city_optimization_suggestions():
             traffic_by_period[period].append(congestion)
         
         # Create detailed prompt for Gemini
+        # Create detailed prompt for Gemini
         prompt = f"""
-You are an expert smart city consultant analyzing Boston's municipal energy consumption and traffic patterns to identify problems that need attention and provide actionable suggestions.
+You are an expert smart city consultant providing ACTIONABLE SOLUTIONS for Boston's municipal infrastructure optimization from given data.
 
 ANALYSIS CONTEXT:
-You are analyzing real data from Boston's municipal infrastructure to identify problems that need the city government's attention.
+You are analyzing real data from Boston's municipal infrastructure to provide specific, implementable solutions to real problems that city government can take action on immediately.
 
 CITY DATA SUMMARY:
 - Total Municipal Buildings: {total_buildings}
@@ -285,50 +286,57 @@ TRAFFIC PATTERNS BY TIME PERIOD:
 BUILDING PORTFOLIO:
 {json.dumps([b.get('category', 'Unknown') for b in buildings[:10]], indent=2)}
 
-ANALYSIS REQUIREMENTS:
-Analyze the relationship between energy consumption patterns and traffic flow data to identify Possible suggestions with respective problems that need attention. Focus on:
+TASK:
+Generate 3-5 SPECIFIC ACTIONABLE SUGGESTIONS that Boston city government can implement to optimize energy consumption and traffic flow. Each solution should be:
 
-1. Energy consumption problems that are costing the city money
-2. Traffic flow problems that are causing congestion and inefficiencies
-3. Cross-sector problems where energy and traffic systems are not working together
-4. Infrastructure problems that need attention
-5. Policy gaps that are causing issues
-6. Data patterns that reveal underlying problems
-7. Finally Actionable Realistic Suggestion to attempt to solve the problem
+1. A concrete action the city can take
+2. Specific to particular buildings, locations, or intersections
+3. Solving a problem based on the data patterns provided
+4. Realistic and implementable
 
-RESPONSE FORMAT REQUIREMENTS:
-Generate 3-5 specific actionable suggestions with problem identifications. The suggestions should be realistic and rooted in the problem and actually possible actions. Each problem must follow this exact structure:
+SOLUTION FORMAT REQUIREMENTS:
+Each solution must follow this exact structure:
 
-- "title": Suggest actionable suggestions mentioning the problem. Be SPECIFIC to particular buildings, locations, or intersections. Keep it to ONE LINE maximum. These are some building names you could use: Central Library, City Hall, Community Center, etc.
-- "why": Provide a concise one-line explanation of WHY this is a problem, focusing on the data evidence or impact.
+- "title": Answer with an Suggesting tone and describe WHAT TO DO, WHERE TO DO IT. Examples:
+  * "Install motion sensors at City Hall to reduce after-hours lighting costs"
+  * "Implement dynamic traffic signals at Mass Ave intersection during peak hours"
+  * "Upgrade HVAC systems in Community Center to reduce energy waste"
 
-An possible example: 
-Dim the lights of Community Center when not in use to reduce the excessively high energy usage and cost. 
-The average energy cost across Boston's municipal buildings is $1.13/kWh which is significantly above typical rates.
+- "why": Explain the problem statement - WHY this solution will help solve the problem, necessarily including data evidence
 
-You do not have to use the example. Use the actual data to identify the problem, the actual solution, the impact and possibly building names.
+EXAMPLE FORMAT:
+{{
+  "title": "Install programmable thermostats in Central Library to optimize heating schedules",
+  "why": "Building shows 40% higher energy usage during off-hours compared to similar facilities causing energy wastage and 20% cost increase",
+  "category": "Energy",
+  "priority": "high",
+  "estimated_impact": "15-20% reduction in heating costs",
+  "implementation_timeline": "Short-term",
+  "estimated_cost": "Low"
+}}
 
 CRITICAL INSTRUCTIONS:
-1. Base ALL problem identifications and possible solution suggestions on the actual data provided above
-2. Make the "title" field describe the Suggestion clearly along with the problem and be LOCATION-SPECIFIC (mention specific buildings, schools, intersections, or areas)
-3. Make the "why" field exactly one line explaining why this is a problem based on the data
-4. Focus on problems that are evident from the data patterns
-6. ORDER problems by priority: all HIGH priority first, then MEDIUM, then LOW
+1. START each title with an Suggesting tone but mention clear actionable solution
+2. Be LOCATION-SPECIFIC (mention exact buildings, intersections, or areas)
+3. Focus on SOLUTIONS along with problems and the why behind them
+4. Base solutions on the actual data patterns provided
+5. Make solutions realistic and implementable by city government
+6. Order by priority: HIGH first, then MEDIUM, then LOW
 
 Return your response as a JSON array with this exact structure:
 [
     {{
-        "title": "[Actionable Suggestion with Problem Description] at [Specific Location/Building]",
-        "why": "One-line explanation of why this is a problem based on data evidence",
+        "title": "[ACTION VERB] [SPECIFIC SOLUTION] at [SPECIFIC LOCATION]",
+        "why": "Problem explanation based on data evidence",
         "category": "Energy" or "Traffic" or "Cross-Sector",
         "priority": "high" or "medium" or "low",
-        "estimated_impact": "Brief description of expected impact",
+        "estimated_impact": "Brief description of expected benefit",
         "implementation_timeline": "Short-term" or "Medium-term" or "Long-term",
         "estimated_cost": "Low" or "Medium" or "High" or "TBD"
     }}
 ]
 
-IMPORTANT: Return ONLY valid JSON, no markdown formatting or additional text. Base all recommendations on the actual data provided.
+IMPORTANT: Return ONLY valid JSON, no markdown formatting. Focus on ACTIONABLE SOLUTIONS, not problem identification.
 """
         
         if use_gemini:
