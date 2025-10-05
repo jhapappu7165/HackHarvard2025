@@ -82,7 +82,7 @@ const Map: React.FC = () => {
       const userId = '27';
       const userEmail = 'aabmtho12@gmail.com';
       const userName = 'Allen';
-      const response = await fetch('http://localhost:5001/api/sim/poop-alert', {
+      const response = await fetch(`${API_BASE_URL}/api/sim/poop-alert`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -116,7 +116,7 @@ const Map: React.FC = () => {
 
     const fetchWeatherData = async () => {
       try {
-        const response = await fetch('http://localhost:5001/api/sim/weather');
+        const response = await fetch(`${API_BASE_URL}/api/sim/weather`);
         const result = await response.json();
         if (result.success && result.data) {
           setWeatherData(result.data);
