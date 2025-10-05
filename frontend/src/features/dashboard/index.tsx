@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import  Map from '@/components/Map';
+import Map from '@/components/Map';
 import { StatsCards } from '@/components/stats-cards';
 import { AnalysisPanel } from '@/components/analysis-panel';
 import { Button } from '@/components/ui/button';
@@ -23,6 +23,7 @@ export function Dashboard() {
   const [selectedBuilding, setSelectedBuilding] = useState<Building | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [activeTab, setActiveTab] = useState("overview");
 
   useEffect(() => {
     initializeDashboard();
@@ -38,6 +39,13 @@ export function Dashboard() {
   };
 
   const handleBuildingClick = (building: Building) => {
+    setSelectedBuilding(building);
+    setIsModalOpen(true);
+  };
+
+  const handleBuildingSelectFromMap = (building: Building) => {
+    // Switch to buildings tab and open the modal
+    setActiveTab("buildings");
     setSelectedBuilding(building);
     setIsModalOpen(true);
   };
@@ -111,7 +119,7 @@ export function Dashboard() {
 
       {/* Main Content */}
       <div className="flex-1 overflow-hidden">
-        <Tabs defaultValue="overview" className="h-full flex flex-col">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="h-full flex flex-col">
           <div className="border-b">
             <div className="container">
               <TabsList>
@@ -132,7 +140,7 @@ export function Dashboard() {
                       <CardTitle>Energy Map</CardTitle>
                     </CardHeader>
                     <CardContent className="h-[calc(100%-80px)]">
-                      <Map />
+                      <Map onBuildingSelect={handleBuildingSelectFromMap} />
                     </CardContent>
                   </Card>
                   <div className="col-span-3">
@@ -210,7 +218,7 @@ export function Dashboard() {
               <TabsContent value="map" className="m-0">
                 <Card className="h-[calc(100vh-200px)]">
                   <CardContent className="h-full p-0">
-                    <Map />
+                    <Map onBuildingSelect={handleBuildingSelectFromMap} />
                   </CardContent>
                 </Card>
               </TabsContent>
