@@ -2,6 +2,7 @@ from flask import Flask, jsonify, request
 from flask_cors import CORS
 from config import Config
 from routes import register_all_routes
+from flask import Flask, jsonify, request, make_response
 import logging
 
 logging.basicConfig(
@@ -35,7 +36,16 @@ def create_app(config_class=Config):
             return response, 200
     
     register_all_routes(app)
-    
+    @app.before_request
+    def handle_preflight():
+        if request.method == "OPTIONS":
+            response = make_response()
+            response.headers.add("Access-Control-Allow-Origin", "*")
+            response.headers.add("Access-Control-Allow-Headers", "Content-Type,Authorization")
+            response.headers.add("Access-Control-Allow-Methods", "GET,POST,PUT,DELETE,OPTIONS")
+            response.headers.add("Access-Control-Max-Age", "3600")
+            return response
+    # Root endpoint
     @app.route('/')
     def index():
         return jsonify({
