@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react'
-import { Cloud, CloudRain, Sun, CloudSun, Droplets } from 'lucide-react'
+import { Cloud, CloudRain, Sun, CloudSun, Droplets, Zap } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
+import { XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Area, AreaChart } from 'recharts'
 
 // Backend API configuration
 const WEATHER_API_BASE = 'http://127.0.0.1:5001/api/weather'
@@ -68,7 +69,7 @@ function getWeatherSuggestion(data: CurrentWeather | HourlyWeather) {
       title: '☀️ Route Extra Load to Solar',
       description: 'Sun intensity is high and skies are clear. Shift deferrable loads to solar for this hour.',
       action: 'Open Energy Dashboard',
-      link: '/energy',
+      link: '/',
     }
   }
 
@@ -78,7 +79,7 @@ function getWeatherSuggestion(data: CurrentWeather | HourlyWeather) {
       title: '🔋 Limit Solar Reliance',
       description: 'Solar output will be limited. Prefer grid or stored reserves for critical services.',
       action: 'Open Energy Dashboard',
-      link: '/energy',
+      link: '/',
     }
   }
 
@@ -88,7 +89,7 @@ function getWeatherSuggestion(data: CurrentWeather | HourlyWeather) {
       title: '🌧️ Traffic Advisory',
       description: 'Expect slower traffic and reduced visibility. Preemptively adjust signal timing or route around low-lying roads.',
       action: 'View Traffic',
-      link: '/traffic',
+      link: '/',
     }
   }
 
@@ -97,7 +98,7 @@ function getWeatherSuggestion(data: CurrentWeather | HourlyWeather) {
     title: '✅ Normal Conditions',
     description: 'Conditions are moderate. Keep default energy mix and traffic patterns.',
     action: 'Open Energy Dashboard',
-    link: '/energy',
+    link: '/',
   }
 }
 
@@ -238,7 +239,79 @@ export function Apps() {
       {/* Main Content */}
       <div className="p-6">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Left Column - Weather Display */}
+          {/* Left Column - Current Conditions & Suggestions */}
+          <div className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Current Conditions</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between p-3 border rounded-lg">
+                    <div className="flex items-center gap-2">
+                      <Cloud className="w-4 h-4 text-muted-foreground" />
+                      <span className="text-sm text-muted-foreground">Cloud Cover</span>
+                    </div>
+                    <div className="text-xl font-bold">{selectedHour.cloudcover_percent}%</div>
+                  </div>
+
+                  <div className="flex items-center justify-between p-3 border rounded-lg">
+                    <div className="flex items-center gap-2">
+                      <Droplets className="w-4 h-4 text-muted-foreground" />
+                      <span className="text-sm text-muted-foreground">Precip. Prob.</span>
+                    </div>
+                    <div className="text-xl font-bold">{selectedHour.precip_prob_percent ?? 0}%</div>
+                  </div>
+
+                  <div className="flex items-center justify-between p-3 border rounded-lg">
+                    <div className="flex items-center gap-2">
+                      <Sun className="w-4 h-4 text-muted-foreground" />
+                      <span className="text-sm text-muted-foreground">Solar</span>
+                    </div>
+                    <div>
+                      <div className="text-xl font-bold">{selectedHour.shortwave_radiation_wm2.toFixed(0)}</div>
+                      <div className="text-xs text-muted-foreground">W/m²</div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between p-3 border rounded-lg">
+                    <div className="flex items-center gap-2">
+                      <CloudRain className="w-4 h-4 text-muted-foreground" />
+                      <span className="text-sm text-muted-foreground">Rain</span>
+                    </div>
+                    <div>
+                      <div className="text-xl font-bold">
+                        {selectedHour.rain_mm > 0 ? selectedHour.rain_mm.toFixed(1) : '0'}
+                      </div>
+                      <div className="text-xs text-muted-foreground">mm</div>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Suggestions */}
+            {suggestion && (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Suggestions</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div>
+                    <h3 className="font-semibold text-lg mb-2">{suggestion.title}</h3>
+                    <p className="text-sm text-muted-foreground mb-4">
+                      {suggestion.description}
+                    </p>
+                    <Button asChild className="w-full">
+                      <a href={suggestion.link}>{suggestion.action}</a>
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+          </div>
+
+          {/* Right Column - Weather Display */}
           <div className="lg:col-span-2 space-y-6">
             {/* Hero Section with Animated Background */}
             <Card className="overflow-hidden">
@@ -262,56 +335,122 @@ export function Apps() {
               </div>
             </Card>
 
-            {/* Current Conditions Grid */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <Card>
-                <CardContent className="pt-6">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Cloud className="w-4 h-4 text-muted-foreground" />
-                    <span className="text-sm text-muted-foreground">Cloud Cover</span>
+            {/* Solar Generation Dashboard */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Zap className="w-5 h-5 text-yellow-500" />
+                  Solar Generation Potential
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {/* Solar Metrics */}
+                <div className="grid grid-cols-3 gap-4">
+                  <div className="text-center p-3 bg-yellow-50 rounded-lg border border-yellow-200">
+                    <div className="text-2xl font-bold text-yellow-600">
+                      {selectedHour.shortwave_radiation_wm2.toFixed(0)}
+                    </div>
+                    <div className="text-xs text-yellow-700">Current W/m²</div>
                   </div>
-                  <div className="text-2xl font-bold">{selectedHour.cloudcover_percent}%</div>
-                </CardContent>
-              </Card>
 
-              <Card>
-                <CardContent className="pt-6">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Droplets className="w-4 h-4 text-muted-foreground" />
-                    <span className="text-sm text-muted-foreground">Precip. Prob.</span>
+                  <div className="text-center p-3 bg-green-50 rounded-lg border border-green-200">
+                    <div className="text-2xl font-bold text-green-600">
+                      {((selectedHour.shortwave_radiation_wm2 / 1000) * (100 - selectedHour.cloudcover_percent) / 100 * 100).toFixed(0)}%
+                    </div>
+                    <div className="text-xs text-green-700">Solar Efficiency</div>
                   </div>
-                  <div className="text-2xl font-bold">
-                    {selectedHour.precip_prob_percent ?? 0}%
-                  </div>
-                </CardContent>
-              </Card>
 
-              <Card>
-                <CardContent className="pt-6">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Sun className="w-4 h-4 text-muted-foreground" />
-                    <span className="text-sm text-muted-foreground">Solar</span>
+                  <div className="text-center p-3 bg-blue-50 rounded-lg border border-blue-200">
+                    <div className="text-2xl font-bold text-blue-600">
+                      {futureHourlyForecast.filter(h => h.shortwave_radiation_wm2 > 300 && h.is_day).length}h
+                    </div>
+                    <div className="text-xs text-blue-700">High Output Hours</div>
                   </div>
-                  <div className="text-2xl font-bold">
-                    {selectedHour.shortwave_radiation_wm2.toFixed(0)}
-                  </div>
-                  <div className="text-xs text-muted-foreground">W/m²</div>
-                </CardContent>
-              </Card>
+                </div>
 
-              <Card>
-                <CardContent className="pt-6">
-                  <div className="flex items-center gap-2 mb-2">
-                    <CloudRain className="w-4 h-4 text-muted-foreground" />
-                    <span className="text-sm text-muted-foreground">Rain</span>
-                  </div>
-                  <div className="text-2xl font-bold">
-                    {selectedHour.rain_mm > 0 ? selectedHour.rain_mm.toFixed(1) : '0'}
-                  </div>
-                  <div className="text-xs text-muted-foreground">mm</div>
-                </CardContent>
-              </Card>
-            </div>
+                {/* Solar Generation Chart */}
+                <div className="h-64">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart
+                      data={futureHourlyForecast.slice(0, 24).map(hour => ({
+                        time: formatTime(hour.timestamp),
+                        solar: hour.shortwave_radiation_wm2,
+                        potential: Math.max(hour.shortwave_radiation_wm2 * ((100 - hour.cloudcover_percent) / 100), 0),
+                        clouds: hour.cloudcover_percent,
+                        efficiency: (hour.shortwave_radiation_wm2 / 1000) * ((100 - hour.cloudcover_percent) / 100) * 100
+                      }))}
+                    >
+                      <defs>
+                        <linearGradient id="solarGradient" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.8} />
+                          <stop offset="95%" stopColor="#f59e0b" stopOpacity={0.1} />
+                        </linearGradient>
+                        <linearGradient id="potentialGradient" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#10b981" stopOpacity={0.6} />
+                          <stop offset="95%" stopColor="#10b981" stopOpacity={0.1} />
+                        </linearGradient>
+                      </defs>
+
+                      <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
+                      <XAxis
+                        dataKey="time"
+                        fontSize={12}
+                        tick={{ fill: '#6b7280' }}
+                      />
+                      <YAxis
+                        label={{ value: 'W/m²', angle: -90, position: 'insideLeft' }}
+                        fontSize={12}
+                        tick={{ fill: '#6b7280' }}
+                      />
+
+                      {/* Actual solar radiation */}
+                      <Area
+                        type="monotone"
+                        dataKey="solar"
+                        stroke="#f59e0b"
+                        strokeWidth={2}
+                        fill="url(#solarGradient)"
+                        name="Solar Radiation"
+                      />
+
+                      {/* Optimized potential */}
+                      <Area
+                        type="monotone"
+                        dataKey="potential"
+                        stroke="#10b981"
+                        strokeWidth={2}
+                        fill="url(#potentialGradient)"
+                        name="Cloud-Adjusted Potential"
+                      />
+
+                      <Tooltip
+                        content={({ active, payload, label }) => {
+                          if (active && payload && payload.length) {
+                            return (
+                              <div className="bg-card p-3 border rounded-lg shadow-lg border-border">
+                                <p className="font-medium text-foreground">{label}</p>
+                                <p className="text-yellow-600">
+                                  <span className="inline-block w-3 h-3 bg-yellow-500 rounded-full mr-2"></span>
+                                  Solar: {payload[0]?.value} W/m²
+                                </p>
+                                <p className="text-green-600">
+                                  <span className="inline-block w-3 h-3 bg-green-500 rounded-full mr-2"></span>
+                                  Potential: {payload[1]?.value} W/m²
+                                </p>
+                                {payload[0]?.payload?.clouds && (
+                                  <p className="text-gray-600 text-sm">Cloud Cover: {payload[0].payload.clouds}%</p>
+                                )}
+                              </div>
+                            )
+                          }
+                          return null
+                        }}
+                      />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </div>
+              </CardContent>
+            </Card>
 
             {/* Hourly Timeline */}
             <Card>
@@ -367,27 +506,7 @@ export function Apps() {
             </Card>
           </div>
 
-          {/* Right Column - Suggestions */}
-          <div>
-            {suggestion && (
-              <Card>
-                <CardHeader>
-                  <CardTitle>Suggestions</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div>
-                    <h3 className="font-semibold text-lg mb-2">{suggestion.title}</h3>
-                    <p className="text-sm text-muted-foreground mb-4">
-                      {suggestion.description}
-                    </p>
-                    <Button asChild className="w-full">
-                      <a href={suggestion.link}>{suggestion.action}</a>
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-          </div>
+
         </div>
       </div>
     </div>
