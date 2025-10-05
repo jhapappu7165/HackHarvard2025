@@ -47,8 +47,8 @@ const Map: React.FC = () => {
   // Traffic volume state (0-100) - will be calculated from actual data
   const [trafficVolumeNB, setTrafficVolumeNB] = useState(35);
   const [trafficVolumeSB, setTrafficVolumeSB] = useState(68);
-  const [currentVehiclesNB, setCurrentVehiclesNB] = useState(0);
-  const [currentVehiclesSB, setCurrentVehiclesSB] = useState(0);
+  const [, setCurrentVehiclesNB] = useState(0);
+  const [, setCurrentVehiclesSB] = useState(0);
 
   // Weather state
 const [weatherData, setWeatherData] = useState<WeatherDataPoint[]>([]);
@@ -154,7 +154,6 @@ useEffect(() => {
     const roadDirection = nbVolume > sbVolume ? 'Northbound' : 'Southbound';
     alert = `ALERT! Many drivers on the road in dangerous conditions, possible flooding. Massachusetts Ave ${roadDirection} is at ${maxVolume}% capacity`;
   } else if (weatherType === 'Ice' && maxVolume > 15) {
-    const roadDirection = nbVolume > sbVolume ? 'Northbound' : 'Southbound';
     alert = `ALERT! The road is at ${maxVolume}% capacity and it is ICY!!`;
   }
   
