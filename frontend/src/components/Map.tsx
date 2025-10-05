@@ -4,6 +4,8 @@ import 'mapbox-gl/dist/mapbox-gl.css';
 import MassAveSB from '../assets/MassAveSB.json';
 import MassAveNB from '../assets/MassAveNB.json';
 import type { FeatureCollection, LineString, GeoJsonProperties} from 'geojson';
+import { useDashboardStore } from '@/store/dashboardStore';
+
 
 mapboxgl.accessToken = import.meta.env.VITE_MAPBOX_TOKEN as string;
 
@@ -99,7 +101,6 @@ const [alertMessage, setAlertMessage] = useState('');
     }
   };
 
->>>>>>> 93928a1 (added sim email)
   // Fetch traffic data on mount
 // Fetch traffic data on mount
 useEffect(() => {
