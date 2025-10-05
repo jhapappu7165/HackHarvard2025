@@ -6,6 +6,7 @@ import MassAveNB from '../assets/MassAveNB.json';
 import type { FeatureCollection, LineString, GeoJsonProperties} from 'geojson';
 
 mapboxgl.accessToken = import.meta.env.VITE_MAPBOX_TOKEN as string;
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://boston-daddy-production.up.railway.app';
 
 const BUILDINGS_WITH_DATA = [
   { id: 1, name: 'Central Library', coords: [-71.0779, 42.3493] as [number, number], category: 'Recreation Center', sqft: 63726, year: 1967, usage: 2100, cost: 252000, efficiency: 112.3, co2: 845 },
@@ -102,7 +103,7 @@ const Map: React.FC = () => {
   useEffect(() => {
     const fetchTrafficData = async () => {
       try {
-        const response = await fetch('http://localhost:5001/api/traffic/directional?intersection_id=31&limit=24');
+        const response = await fetch(`${API_BASE_URL}/api/traffic/directional?intersection_id=31&limit=24`);
         const result = await response.json();
         if (result.success && result.data) {
           setTrafficData(result.data);
