@@ -287,7 +287,7 @@ BUILDING PORTFOLIO:
 {json.dumps([b.get('category', 'Unknown') for b in buildings[:10]], indent=2)}
 
 TASK:
-Generate 3-5 SPECIFIC ACTIONABLE SUGGESTIONS that Boston city government can implement to optimize energy consumption and traffic flow. Each solution should be:
+Generate 3-5 SPECIFIC ACTIONABLE SUGGESTIONS that Boston city government can implement to optimize energy consumption and traffic flow mentioning the identified problem. Each solution should be:
 
 1. A concrete action the city can take
 2. Specific to particular buildings, locations, or intersections
