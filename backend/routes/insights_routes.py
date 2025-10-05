@@ -290,9 +290,11 @@ TASK:
 Generate 3-5 SPECIFIC ACTIONABLE SUGGESTIONS that Boston city government can implement to optimize energy consumption and traffic flow mentioning the identified problem. Each solution should be:
 
 1. A concrete action the city can take
-2. Specific to particular buildings, locations, or intersections
+2. Mentioning specific buildings names as required, such as Central Library, City Hall, etc.
 3. Solving a problem based on the data patterns provided
 4. Realistic and implementable
+
+
 
 SOLUTION FORMAT REQUIREMENTS:
 Each solution must follow this exact structure:
