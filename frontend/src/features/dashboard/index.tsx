@@ -43,13 +43,6 @@ export function Dashboard() {
     setIsModalOpen(true);
   };
 
-  const handleBuildingSelectFromMap = (building: Building) => {
-    // Switch to buildings tab and open the modal
-    setActiveTab("buildings");
-    setSelectedBuilding(building);
-    setIsModalOpen(true);
-  };
-
   if (error) {
     return (
       <div className="flex items-center justify-center h-screen">
@@ -140,7 +133,7 @@ export function Dashboard() {
                       <CardTitle>Energy Map</CardTitle>
                     </CardHeader>
                     <CardContent className="h-[calc(100%-80px)]">
-                      <Map onBuildingSelect={handleBuildingSelectFromMap} />
+                      <Map />
                     </CardContent>
                   </Card>
                   <div className="col-span-3">
@@ -218,7 +211,7 @@ export function Dashboard() {
               <TabsContent value="map" className="m-0">
                 <Card className="h-[calc(100vh-200px)]">
                   <CardContent className="h-full p-0">
-                    <Map onBuildingSelect={handleBuildingSelectFromMap} />
+                    <Map/>
                   </CardContent>
                 </Card>
               </TabsContent>
