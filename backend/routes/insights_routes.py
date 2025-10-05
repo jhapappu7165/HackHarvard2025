@@ -296,23 +296,28 @@ Analyze the relationship between energy consumption patterns and traffic flow da
 6. Data patterns that reveal underlying problems
 
 RESPONSE FORMAT REQUIREMENTS:
-Generate 3-5 specific problem identifications with possible solution suggestion. Each problem must follow this exact structure:
+Generate 3-5 specific actionable suggestions with problem identifications. The suggestions should be realistic and rooted in the problem and actually possible actions. Each problem must follow this exact structure:
 
-- "title": Suggest actionable suggestion mentioning the problem. Be SPECIFIC to particular buildings, locations, or intersections. Keep it to ONE LINE maximum.
+- "title": Suggest actionable suggestions mentioning the problem. Be SPECIFIC to particular buildings, locations, or intersections. Keep it to ONE LINE maximum. These are some building names you could use: Central Library, City Hall, Community Center, etc.
 - "why": Provide a concise one-line explanation of WHY this is a problem, focusing on the data evidence or impact.
 
+An possible example: 
+Dim the lights of Community Center when not in use to reduce the excessively high energy usage and cost. 
+The average energy cost across Boston's municipal buildings is $1.13/kWh which is significantly above typical rates.
+
+You do not have to use the example. Use the actual data to identify the problem, the actual solution, the impact and possibly building names.
+
 CRITICAL INSTRUCTIONS:
-1. Base ALL problem identifications on the actual data provided above
-2. Make the "title" field describe the PROBLEM clearly and be LOCATION-SPECIFIC (mention specific buildings, schools, intersections, or areas)
+1. Base ALL problem identifications and solution on the actual data provided above
+2. Make the "title" field describe the Suggestion clearly along with the problem and be LOCATION-SPECIFIC (mention specific buildings, schools, intersections, or areas)
 3. Make the "why" field exactly one line explaining why this is a problem based on the data
 4. Focus on problems that are evident from the data patterns
-5. Do NOT provide solutions - only identify problems
 6. ORDER problems by priority: all HIGH priority first, then MEDIUM, then LOW
 
 Return your response as a JSON array with this exact structure:
 [
     {{
-        "title": "[Problem Description] at [Specific Location/Building]",
+        "title": "[Actionable Suggestion with Problem Description] at [Specific Location/Building]",
         "why": "One-line explanation of why this is a problem based on data evidence",
         "category": "Energy" or "Traffic" or "Cross-Sector",
         "priority": "high" or "medium" or "low",
