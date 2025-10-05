@@ -31,7 +31,7 @@ const Map: React.FC = () => {
   const hoverPopup = useRef<mapboxgl.Popup | null>(null);
   const clickPopup = useRef<mapboxgl.Popup | null>(null);
   const roadPopupRef = useRef<mapboxgl.Popup | null>(null);
-  
+
   // Refs to hold current traffic values
   const trafficVolumeNBRef = useRef(35);
   const trafficVolumeSBRef = useRef(68);
@@ -43,7 +43,7 @@ const Map: React.FC = () => {
   const [trafficVolumeSB, setTrafficVolumeSB] = useState(68);
   const [currentVehiclesNB, setCurrentVehiclesNB] = useState(0);
   const [currentVehiclesSB, setCurrentVehiclesSB] = useState(0);
-  
+
   // State for tracking current data index
   const [trafficData, setTrafficData] = useState<TrafficDataPoint[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -57,7 +57,7 @@ const Map: React.FC = () => {
         // Fetch data for intersection 31 (or make this configurable)
         const response = await fetch('http://localhost:5001/api/traffic/directional?intersection_id=31&limit=24');
         const result = await response.json();
-        
+
         if (result.success && result.data) {
           setTrafficData(result.data);
           console.log(`Loaded ${result.data.length} traffic data points`);
@@ -76,34 +76,34 @@ const Map: React.FC = () => {
 
     const interval = setInterval(() => {
       const currentData = trafficData[currentIndex];
-      
+
       // Calculate northbound total
       const nbTotal = currentData.northbound_left + currentData.northbound_thru + currentData.northbound_right;
-      
+
       // Calculate southbound total
       const sbTotal = currentData.southbound_left + currentData.southbound_thru + currentData.southbound_right;
-      
+
       // Store actual vehicle counts
       setCurrentVehiclesNB(nbTotal);
       setCurrentVehiclesSB(sbTotal);
-      
+
       // Update refs
       currentVehiclesNBRef.current = nbTotal;
       currentVehiclesSBRef.current = sbTotal;
-      
+
       // Normalize to 0-100 scale (assuming max ~400 vehicles per direction)
       const nbVolume = Math.min(100, Math.round((nbTotal / 400) * 100));
       const sbVolume = Math.min(100, Math.round((sbTotal / 400) * 100));
-      
+
       setTrafficVolumeNB(nbVolume);
       setTrafficVolumeSB(sbVolume);
-      
+
       // Update refs
       trafficVolumeNBRef.current = nbVolume;
       trafficVolumeSBRef.current = sbVolume;
-      
+
       console.log(`Time: ${currentData.reading_timestamp}, NB: ${nbTotal} (${nbVolume}%), SB: ${sbTotal} (${sbVolume}%)`);
-      
+
       // Move to next data point, loop back to start if at end
       setCurrentIndex((prevIndex) => (prevIndex + 1) % trafficData.length);
     }, 3000);
@@ -194,7 +194,7 @@ const Map: React.FC = () => {
 
     map.current.on('style.load', () => {
       console.log('===== Style loaded, adding 3D buildings... =====');
-      
+
       // Debug: Log current zoom level
       console.log('Current zoom level:', map.current!.getZoom());
 
@@ -252,7 +252,7 @@ const Map: React.FC = () => {
           labelLayerId
         );
         console.log('3D buildings layer added');
-        
+
         // Debug: Verify layer was added
         setTimeout(() => {
           console.log('Layer check:', map.current!.getLayer('3d-buildings'));
@@ -329,7 +329,7 @@ const Map: React.FC = () => {
         closeButton: false,
         closeOnClick: false,
       });
-      
+
       console.log('Setting up click handlers...');
 
       // Northbound road hover
@@ -346,7 +346,7 @@ const Map: React.FC = () => {
           `)
           .addTo(map.current!);
       };
-      
+
       map.current!.on('mouseenter', 'mass-ave-nb-highlight', updateNBPopup);
 
       map.current!.on('mouseleave', 'mass-ave-nb-highlight', () => {
@@ -368,29 +368,29 @@ const Map: React.FC = () => {
           `)
           .addTo(map.current!);
       };
-      
+
       map.current!.on('mouseenter', 'mass-ave-sb-highlight', updateSBPopup);
 
       map.current!.on('mouseleave', 'mass-ave-sb-highlight', () => {
         map.current!.getCanvas().style.cursor = '';
         roadPopupRef.current!.remove();
       });
-      
+
       // Add general map click handler here, after all layers are set up
       console.log('Setting up click handlers...');
       console.log('Map object exists:', !!map.current);
-      
+
       map.current!.on('click', (e) => {
         console.log('===== MAP CLICK EVENT FIRED =====');
         console.log('Map clicked at:', e.lngLat);
         console.log('Click point pixel coordinates:', e.point);
-        
+
         // Check for buildings first
         const buildingFeatures = map.current!.queryRenderedFeatures(e.point, {
           layers: ['3d-buildings']
         });
         console.log('Buildings at click point:', buildingFeatures.length);
-        
+
         if (buildingFeatures.length > 0) {
           console.log('Building features:', buildingFeatures);
 
@@ -465,7 +465,7 @@ const Map: React.FC = () => {
           clickPopup.current.on('close', () => {
             // Popup closed
           });
-          
+
           return; // Stop here, don't close popup
         }
 
@@ -624,46 +624,46 @@ const Map: React.FC = () => {
         console.log('===== MAP CLICK EVENT FIRED =====');
         console.log('Map clicked at:', e.lngLat);
         console.log('Click point pixel coordinates:', e.point);
-        
+
         // Check for buildings first
         const buildingFeatures = map.current!.queryRenderedFeatures(e.point, {
           layers: ['3d-buildings']
         });
         console.log('Buildings at click point:', buildingFeatures.length);
-        
+
         if (buildingFeatures.length > 0) {
           console.log('Building features:', buildingFeatures);
 
-        // If we clicked on a building, handle it and stop
-        if (buildingFeatures.length > 0) {
-          const feature = buildingFeatures[0];
-          const properties = feature.properties;
+          // If we clicked on a building, handle it and stop
+          if (buildingFeatures.length > 0) {
+            const feature = buildingFeatures[0];
+            const properties = feature.properties;
 
-          const buildingInfo = {
-            name: properties?.name || 'Unnamed Building',
-            height: properties?.height || 'N/A',
-            type: properties?.type || 'Commercial',
-            underground: properties?.underground || 'No',
-            minHeight: properties?.min_height || 0,
-          };
+            const buildingInfo = {
+              name: properties?.name || 'Unnamed Building',
+              height: properties?.height || 'N/A',
+              type: properties?.type || 'Commercial',
+              underground: properties?.underground || 'No',
+              minHeight: properties?.min_height || 0,
+            };
 
-          console.log('Building clicked:', buildingInfo);
+            console.log('Building clicked:', buildingInfo);
 
-          if (clickPopup.current) {
-            clickPopup.current.remove();
-          }
+            if (clickPopup.current) {
+              clickPopup.current.remove();
+            }
 
-          clickPopup.current = new mapboxgl.Popup({
-            offset: 25,
-            closeButton: true,
-            closeOnClick: true,
-            closeOnMove: false,
-            maxWidth: '280px',
-            className: 'building-details-popup'
-          })
-            .setLngLat(e.lngLat)
-            .setHTML(
-              `<div style="padding: 12px; font-family: system-ui, -apple-system, sans-serif;">
+            clickPopup.current = new mapboxgl.Popup({
+              offset: 25,
+              closeButton: true,
+              closeOnClick: true,
+              closeOnMove: false,
+              maxWidth: '280px',
+              className: 'building-details-popup'
+            })
+              .setLngLat(e.lngLat)
+              .setHTML(
+                `<div style="padding: 12px; font-family: system-ui, -apple-system, sans-serif;">
                 <div style="border-bottom: 1px solid #fbbf24; padding-bottom: 8px; margin-bottom: 12px;">
                   <h3 style="margin:0; font-weight:600; font-size:16px; color: #fff;">
                     ${buildingInfo.name}
@@ -701,20 +701,21 @@ const Map: React.FC = () => {
                   View Details
                 </button>
               </div>`
-            )
-            .addTo(map.current!);
+              )
+              .addTo(map.current!);
 
-          clickPopup.current.on('close', () => {
-            // Popup closed
-          });
-          
-          return; // Stop here, don't close popup
+            clickPopup.current.on('close', () => {
+              // Popup closed
+            });
+
+            return; // Stop here, don't close popup
+          }
+
+          // Only close popup if we didn't click on a building
+          if (clickPopup.current) {
+            clickPopup.current.remove();
+          }
         }
-
-        // Only close popup if we didn't click on a building
-        if (clickPopup.current) {
-          clickPopup.current.remove();
-        }}
       });
     });
 
