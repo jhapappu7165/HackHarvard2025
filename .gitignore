@@ -83,3 +83,6 @@ coverage.xml
 # Build artifacts
 *.tgz
 *.tar.gz
+
+# Local Netlify folder
+.netlify
