@@ -44,6 +44,8 @@ export function BuildingDetailModal({
     if (building && open) {
       fetchBuildingData();
     }
+    
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [building, open]);
 
   const fetchBuildingData = async () => {
