@@ -5,8 +5,8 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 
-// Backend API configuration
-const WEATHER_API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5001'
+
+import { API_CONFIG } from '@/config/api'
 
 interface CurrentWeather {
   timestamp: string
@@ -130,16 +130,16 @@ export function Apps() {
       setError(null)
 
       // Fetch current weather
-      const currentRes = await fetch(`${WEATHER_API_BASE}/api/weather/data?limit=1`)
+      const currentRes = await fetch(`${API_CONFIG.BASE_URL}/api/weather/openmeteo_current`)
       if (!currentRes.ok) throw new Error('Failed to fetch current weather')
       const currentData = await currentRes.json()
-      const current = currentData.data?.[0] // Get first weather data point
+      const current = currentData.data // Extract data from Flask response (single object)
 
       // Fetch hourly forecast
-      const forecastRes = await fetch(`${WEATHER_API_BASE}/api/weather/data?limit=24`)
+      const forecastRes = await fetch(`${API_CONFIG.BASE_URL}/api/weather/openmeteo_forecast`)
       if (!forecastRes.ok) throw new Error('Failed to fetch forecast')
       const forecastData = await forecastRes.json()
-      const forecast = forecastData.data || [] // Get weather data array
+      const forecast = forecastData.data || [] // Extract data from Flask response
 
       // Filter to only include current and future hours
       const now = new Date()
@@ -209,7 +209,7 @@ export function Apps() {
                 cd backend<br />
                 python app.py
               </code>
-              <p>Backend should be at: <strong>http://127.0.0.1:5001</strong></p>
+              <p>Backend should be at: <strong>{API_CONFIG.BASE_URL}</strong></p>
             </div>
           </CardContent>
         </Card>
