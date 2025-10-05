@@ -88,7 +88,7 @@ export const API_CONFIG = {
     // Insights endpoints
     INSIGHTS: '/api/insights',
     GENERATE_INSIGHTS: '/api/insights/generate-insights',
-    BUILDING_INSIGHTS: (id: number) => `/api/insights/insights/building/${id}`,
+    BUILDING_INSIGHTS: (id: number) => `/api/insights/building/${id}`,
     INSIGHTS_SUMMARY: '/api/insights/summary',
 
     // NEW: AI-Powered Suggestions (Gemini) endpoint

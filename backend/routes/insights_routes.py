@@ -7,7 +7,7 @@ logger = logging.getLogger(__name__)
 insights_bp = Blueprint('insights', __name__)
 db = SupabaseClient()
 
-@insights_bp.route('/insights', methods=['GET'])
+@insights_bp.route('/', methods=['GET'])
 def get_insights():
     """Get all insights with optional filters"""
     try:
@@ -40,7 +40,7 @@ def get_insights():
         logger.error(f"Error fetching insights: {str(e)}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
-@insights_bp.route('/insights/<int:insight_id>', methods=['GET'])
+@insights_bp.route('/<int:insight_id>', methods=['GET'])
 def get_insight(insight_id):
     """Get specific insight"""
     try:
@@ -59,7 +59,7 @@ def get_insight(insight_id):
         logger.error(f"Error fetching insight {insight_id}: {str(e)}")
         return jsonify({'success': False, 'error': str(e)}), 404
 
-@insights_bp.route('/insights/building/<int:building_id>', methods=['GET'])
+@insights_bp.route('/building/<int:building_id>', methods=['GET'])
 def get_building_insights(building_id):
     """Get insights for specific building"""
     try:
