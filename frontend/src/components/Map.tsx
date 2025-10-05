@@ -60,6 +60,46 @@ const [alertMessage, setAlertMessage] = useState('');
   const [trafficData, setTrafficData] = useState<TrafficDataPoint[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
 
+  const { pinpoints, activeStudyCase } = useDashboardStore();
+  const [lastAlertSent, setLastAlertSent] = useState<number>(0);
+
+  const sendPoopAlert = async (alertMessage: string, weatherType: string, trafficVolume: number) => {
+    const now = Date.now();
+    if (now - lastAlertSent < 10000) { // 10 seconds in milliseconds
+      console.log('Skipping email - sent too recently');
+      return;
+    }
+    
+    setLastAlertSent(now);
+    
+    try {
+      // Replace these with actual user data from your auth/user store
+      const userId = '27'; // TODO: Get from your auth context/store
+      const userEmail = 'aabmtho12@gmail.com'; // TODO: Get from your auth context/store
+      const userName = 'Allen'; // TODO: Get from your auth context/store
+      
+      const response = await fetch('http://localhost:5001/api/sim/poop-alert', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          user_id: userId,
+          user_email: userEmail,
+          user_name: userName,
+          tamagotchi_name: `Traffic Alert - ${weatherType}`,
+          custom_message: alertMessage
+        })
+      });
+      
+      const data = await response.json();
+      console.log('Alert email result:', data);
+    } catch (error) {
+      console.error('Error sending alert email:', error);
+    }
+  };
+
+>>>>>>> 93928a1 (added sim email)
   // Fetch traffic data on mount
 // Fetch traffic data on mount
 useEffect(() => {
@@ -161,6 +201,7 @@ useEffect(() => {
   if (alert) {
     setAlertMessage(alert);
     setShowAlert(true);
+    sendPoopAlert(alert, weatherType, maxVolume);
   } else {
     setShowAlert(false);
   }
