@@ -266,7 +266,7 @@ def generate_city_optimization_suggestions():
         
         # Create detailed prompt for Gemini
         prompt = f"""
-You are an expert smart city consultant analyzing Boston's municipal energy consumption and traffic patterns to identify problems that need attention.
+You are an expert smart city consultant analyzing Boston's municipal energy consumption and traffic patterns to identify problems that need attention and provide actionable suggestions.
 
 ANALYSIS CONTEXT:
 You are analyzing real data from Boston's municipal infrastructure to identify problems that need the city government's attention.
@@ -296,9 +296,9 @@ Analyze the relationship between energy consumption patterns and traffic flow da
 6. Data patterns that reveal underlying problems
 
 RESPONSE FORMAT REQUIREMENTS:
-Generate 3-5 specific problem identifications. Each problem must follow this exact structure:
+Generate 3-5 specific problem identifications with possible solution suggestion. Each problem must follow this exact structure:
 
-- "title": Should describe WHAT THE PROBLEM IS in a clear, specific way. Be SPECIFIC to particular buildings, locations, or intersections. Keep it to ONE LINE maximum.
+- "title": Should describe WHAT THE PROBLEM IS in a clear, specific way with short solution suggestion. Be SPECIFIC to particular buildings, locations, or intersections. Keep it to ONE LINE maximum.
 - "why": Provide a concise one-line explanation of WHY this is a problem, focusing on the data evidence or impact.
 
 CRITICAL INSTRUCTIONS:
