@@ -4,7 +4,6 @@ import 'mapbox-gl/dist/mapbox-gl.css';
 import MassAveSB from '../assets/MassAveSB.json';
 import MassAveNB from '../assets/MassAveNB.json';
 import type { FeatureCollection, LineString, GeoJsonProperties} from 'geojson';
-import { useDashboardStore } from '@/store/dashboardStore';
 
 
 mapboxgl.accessToken = import.meta.env.VITE_MAPBOX_TOKEN as string;
@@ -62,10 +61,9 @@ const [alertMessage, setAlertMessage] = useState('');
   const [trafficData, setTrafficData] = useState<TrafficDataPoint[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
 
-  const { pinpoints, activeStudyCase } = useDashboardStore();
   const [lastAlertSent, setLastAlertSent] = useState<number>(0);
 
-  const sendPoopAlert = async (alertMessage: string, weatherType: string, trafficVolume: number) => {
+  const sendPoopAlert = async (alertMessage: string, weatherType: string) => {
     const now = Date.now();
     if (now - lastAlertSent < 10000) { // 10 seconds in milliseconds
       console.log('Skipping email - sent too recently');
@@ -202,10 +200,11 @@ useEffect(() => {
   if (alert) {
     setAlertMessage(alert);
     setShowAlert(true);
-    sendPoopAlert(alert, weatherType, maxVolume);
+    sendPoopAlert(alert, weatherType);
   } else {
     setShowAlert(false);
   }
+// eslint-disable-next-line react-hooks/exhaustive-deps
 }, [weatherData, currentWeatherIndex, trafficVolumeNB, trafficVolumeSB]);
 
 // Keyboard handler for 'o' key to cycle weather

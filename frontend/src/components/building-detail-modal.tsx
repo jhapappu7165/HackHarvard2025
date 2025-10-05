@@ -70,7 +70,7 @@ export function BuildingDetailModal({
   if (!building) return null;
 
   // Process readings for charts
-  const monthlyData = readings.reduce((acc: any[], reading) => {
+  const monthlyData = readings.reduce((acc: { month: string; usage: number; cost: number; }[], reading) => {
     const month = reading.reading_date.substring(0, 7); // YYYY-MM
     const existing = acc.find((item) => item.month === month);
 
@@ -91,7 +91,7 @@ export function BuildingDetailModal({
   monthlyData.sort((a, b) => a.month.localeCompare(b.month));
 
   // Fuel type breakdown
-  const fuelTypeData = readings.reduce((acc: any[], reading) => {
+  const fuelTypeData = readings.reduce((acc: { fuel_type: string; usage: number; cost: number; }[], reading) => {
     const existing = acc.find((item) => item.fuel_type === reading.fuel_type);
 
     if (existing) {
