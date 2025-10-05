@@ -286,7 +286,7 @@ BUILDING PORTFOLIO:
 {json.dumps([b.get('category', 'Unknown') for b in buildings[:10]], indent=2)}
 
 ANALYSIS REQUIREMENTS:
-Analyze the relationship between energy consumption patterns and traffic flow data to identify PROBLEMS that need attention. Focus on:
+Analyze the relationship between energy consumption patterns and traffic flow data to identify Possible suggestions with respective problems that need attention. Focus on:
 
 1. Energy consumption problems that are costing the city money
 2. Traffic flow problems that are causing congestion and inefficiencies
@@ -294,6 +294,7 @@ Analyze the relationship between energy consumption patterns and traffic flow da
 4. Infrastructure problems that need attention
 5. Policy gaps that are causing issues
 6. Data patterns that reveal underlying problems
+7. Finally Actionable Realistic Suggestion to attempt to solve the problem
 
 RESPONSE FORMAT REQUIREMENTS:
 Generate 3-5 specific actionable suggestions with problem identifications. The suggestions should be realistic and rooted in the problem and actually possible actions. Each problem must follow this exact structure:
@@ -308,7 +309,7 @@ The average energy cost across Boston's municipal buildings is $1.13/kWh which i
 You do not have to use the example. Use the actual data to identify the problem, the actual solution, the impact and possibly building names.
 
 CRITICAL INSTRUCTIONS:
-1. Base ALL problem identifications and solution on the actual data provided above
+1. Base ALL problem identifications and possible solution suggestions on the actual data provided above
 2. Make the "title" field describe the Suggestion clearly along with the problem and be LOCATION-SPECIFIC (mention specific buildings, schools, intersections, or areas)
 3. Make the "why" field exactly one line explaining why this is a problem based on the data
 4. Focus on problems that are evident from the data patterns
