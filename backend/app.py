@@ -1,10 +1,9 @@
-from flask import Flask, jsonify
+from flask import Flask, jsonify, request
 from flask_cors import CORS
 from config import Config
 from routes import register_all_routes
 import logging
 
-# Configure logging
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
@@ -12,24 +11,31 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 def create_app(config_class=Config):
-    """Application factory pattern"""
     app = Flask(__name__)
     app.config.from_object(config_class)
     
-    # Enable CORS for frontend - allow all origins
+    # CORS configuration
     CORS(app, resources={
         r"/api/*": {
             "origins": "*",
             "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
             "allow_headers": ["Content-Type", "Authorization"],
-            "supports_credentials": True
+            "supports_credentials": False  # Cambia a False si no usas cookies
         }
     })
     
-    # Register all blueprints
+    # AGREGAR ESTO: Handler global para OPTIONS
+    @app.before_request
+    def handle_preflight():
+        if request.method == "OPTIONS":
+            response = jsonify({'status': 'ok'})
+            response.headers.add('Access-Control-Allow-Origin', '*')
+            response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
+            response.headers.add('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS')
+            return response, 200
+    
     register_all_routes(app)
     
-    # Root endpoint
     @app.route('/')
     def index():
         return jsonify({
@@ -47,15 +53,12 @@ def create_app(config_class=Config):
             'documentation': 'See README.md for API documentation'
         }), 200
     
-    # Health check endpoint
     @app.route('/health')
     def health():
         try:
             from utils.supabase_client import SupabaseClient
             db = SupabaseClient()
-            # Test database connection
             db.get_client().table('energy_buildings').select('id').limit(1).execute()
-            
             return jsonify({
                 'status': 'healthy',
                 'service': 'Energy Insights API',
@@ -71,7 +74,6 @@ def create_app(config_class=Config):
                 'error': str(e)
             }), 503
     
-    # Error handlers
     @app.errorhandler(404)
     def not_found(error):
         return jsonify({'error': 'Endpoint not found'}), 404
