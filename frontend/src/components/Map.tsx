@@ -345,10 +345,15 @@ const Map: React.FC = () => {
       map.current.on('mouseenter', 'mass-ave-nb-line', (e) => {
         if (!map.current) return;
         map.current.getCanvas().style.cursor = 'pointer';
+        
+        const vehicles = currentVehiclesNBRef.current;
+        const volume = trafficVolumeNBRef.current;
+        const color = getTrafficColor(volume);
+        
         roadPopupRef.current!.setLngLat(e.lngLat).setHTML(`
-          <div style="padding: 6px;">
+          <div style="padding: 6px; color: black;">
             <strong>Mass Ave NB</strong><br>
-            ${currentVehiclesNBRef.current} vehicles (${trafficVolumeNBRef.current}%)
+            <span style="color: ${color}; font-weight: bold;">${vehicles} vehicles (${volume}%)</span>
           </div>
         `).addTo(map.current);
       });
@@ -362,10 +367,15 @@ const Map: React.FC = () => {
       map.current.on('mouseenter', 'mass-ave-sb-line', (e) => {
         if (!map.current) return;
         map.current.getCanvas().style.cursor = 'pointer';
+        
+        const vehicles = currentVehiclesSBRef.current;
+        const volume = trafficVolumeSBRef.current;
+        const color = getTrafficColor(volume);
+        
         roadPopupRef.current!.setLngLat(e.lngLat).setHTML(`
-          <div style="padding: 6px;">
+          <div style="padding: 6px; color: black;">
             <strong>Mass Ave SB</strong><br>
-            ${currentVehiclesSBRef.current} vehicles (${trafficVolumeSBRef.current}%)
+            <span style="color: ${color}; font-weight: bold;">${vehicles} vehicles (${volume}%)</span>
           </div>
         `).addTo(map.current);
       });
