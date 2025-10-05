@@ -23,6 +23,13 @@ interface TrafficDataPoint {
   time_period: string;
 }
 
+
+interface WeatherDataPoint {
+  id: number;
+  weatherType: string;
+  temp: number;
+}
+
 const Map: React.FC = () => {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<mapboxgl.Map | null>(null);
@@ -40,32 +47,53 @@ const Map: React.FC = () => {
   // Traffic volume state (0-100) - will be calculated from actual data
   const [trafficVolumeNB, setTrafficVolumeNB] = useState(35);
   const [trafficVolumeSB, setTrafficVolumeSB] = useState(68);
-  const [, setCurrentVehiclesNB] = useState(0);
-  const [, setCurrentVehiclesSB] = useState(0);
+  const [currentVehiclesNB, setCurrentVehiclesNB] = useState(0);
+  const [currentVehiclesSB, setCurrentVehiclesSB] = useState(0);
+
+  // Weather state
+const [weatherData, setWeatherData] = useState<WeatherDataPoint[]>([]);
+const [currentWeatherIndex, setCurrentWeatherIndex] = useState(0);
+const [showAlert, setShowAlert] = useState(false);
+const [alertMessage, setAlertMessage] = useState('');
   
   // State for tracking current data index
   const [trafficData, setTrafficData] = useState<TrafficDataPoint[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
 
   // Fetch traffic data on mount
-  useEffect(() => {
-    const fetchTrafficData = async () => {
-      try {
-        // Fetch data for intersection 31 (or make this configurable)
-        const response = await fetch('http://localhost:5001/api/traffic/directional?intersection_id=31&limit=24');
-        const result = await response.json();
-        
-        if (result.success && result.data) {
-          setTrafficData(result.data);
-          console.log(`Loaded ${result.data.length} traffic data points`);
-        }
-      } catch (error) {
-        console.error('Error fetching traffic data:', error);
+// Fetch traffic data on mount
+useEffect(() => {
+  const fetchTrafficData = async () => {
+    try {
+      const response = await fetch('http://localhost:5001/api/traffic/directional?intersection_id=31&limit=24');
+      const result = await response.json();
+      
+      if (result.success && result.data) {
+        setTrafficData(result.data);
+        console.log(`Loaded ${result.data.length} traffic data points`);
       }
-    };
+    } catch (error) {
+      console.error('Error fetching traffic data:', error);
+    }
+  };
 
-    fetchTrafficData();
-  }, []);
+  const fetchWeatherData = async () => {
+    try {
+      const response = await fetch('http://localhost:5001/api/sim/weather');
+      const result = await response.json();
+      
+      if (result.success && result.data) {
+        setWeatherData(result.data);
+        console.log(`Loaded ${result.data.length} weather data points`);
+      }
+    } catch (error) {
+      console.error('Error fetching weather data:', error);
+    }
+  };
+
+  fetchTrafficData();
+  fetchWeatherData();
+}, []);
 
   // Update traffic volumes every 3 seconds and cycle through data
   useEffect(() => {
@@ -107,7 +135,50 @@ const Map: React.FC = () => {
 
     return () => clearInterval(interval);
   }, [trafficData, currentIndex]);
+// Check for weather alerts
+useEffect(() => {
+  if (weatherData.length === 0) return;
 
+  const currentWeather = weatherData[currentWeatherIndex];
+  const weatherType = currentWeather.weatherType;
+  const nbVolume = trafficVolumeNB;
+  const sbVolume = trafficVolumeSB;
+  const maxVolume = Math.max(nbVolume, sbVolume);
+
+  let alert = '';
+
+  if (weatherType === 'Rainy' && maxVolume > 65) {
+    const roadDirection = nbVolume > sbVolume ? 'Northbound' : 'Southbound';
+    alert = `ALERT! Many drivers on the road in dangerous conditions, possible flooding. Massachusetts Ave ${roadDirection} is at ${maxVolume}% capacity`;
+  } else if (weatherType === 'Thunder Storm' && maxVolume > 35) {
+    const roadDirection = nbVolume > sbVolume ? 'Northbound' : 'Southbound';
+    alert = `ALERT! Many drivers on the road in dangerous conditions, possible flooding. Massachusetts Ave ${roadDirection} is at ${maxVolume}% capacity`;
+  } else if (weatherType === 'Ice' && maxVolume > 15) {
+    const roadDirection = nbVolume > sbVolume ? 'Northbound' : 'Southbound';
+    alert = `ALERT! The road is at ${maxVolume}% capacity and it is ICY!!`;
+  }
+  
+
+  if (alert) {
+    setAlertMessage(alert);
+    setShowAlert(true);
+  } else {
+    setShowAlert(false);
+  }
+}, [weatherData, currentWeatherIndex, trafficVolumeNB, trafficVolumeSB]);
+
+// Keyboard handler for 'o' key to cycle weather
+useEffect(() => {
+  const handleKeyPress = (e: KeyboardEvent) => {
+    if (e.key === 'o' || e.key === 'O') {
+      setCurrentWeatherIndex((prevIndex) => (prevIndex + 1) % weatherData.length);
+      console.log('Weather cycled to index:', (currentWeatherIndex + 1) % weatherData.length);
+    }
+  };
+
+  window.addEventListener('keydown', handleKeyPress);
+  return () => window.removeEventListener('keydown', handleKeyPress);
+}, [weatherData.length, currentWeatherIndex]);
   // Function to get color based on traffic volume (0-100)
   const getTrafficColor = (volume: number): string => {
     if (volume <= 33) {
@@ -675,18 +746,80 @@ const Map: React.FC = () => {
   }, [trafficVolumeNB, trafficVolumeSB]);
 
   return (
-    <div
-      ref={mapContainer}
-      style={{
-        width: '100%',
-        height: 400,
-        borderRadius: '8px',
-        position: 'relative',
-        zIndex: 1,
-      }}
-      className="map-container"
-      onClick={() => console.log('DIV CLICKED')}
-    />
+    <div style={{ position: 'relative', width: '100%', height: 400 }}>
+      {/* Weather Display Box */}
+      {weatherData.length > 0 && (
+        <div style={{
+          position: 'absolute',
+          top: '10px',
+          left: '10px',
+          backgroundColor: 'rgba(0, 0, 0, 0.8)',
+          color: 'white',
+          padding: '8px 12px',
+          borderRadius: '6px',
+          zIndex: 10,
+          fontSize: '12px',
+          fontWeight: '600',
+          border: '1px solid rgba(255, 255, 255, 0.2)',
+          backdropFilter: 'blur(10px)'
+        }}>
+          {weatherData[currentWeatherIndex]?.weatherType} • {weatherData[currentWeatherIndex]?.temp}°C
+        </div>
+      )}
+  
+      {/* Alert Popup */}
+      {showAlert && (
+        <div style={{
+          position: 'absolute',
+          top: '50%',
+          left: '50%',
+          transform: 'translate(-50%, -50%)',
+          backgroundColor: 'rgba(239, 68, 68, 0.95)',
+          color: 'white',
+          padding: '20px 24px',
+          borderRadius: '8px',
+          zIndex: 1000,
+          fontSize: '14px',
+          fontWeight: '600',
+          maxWidth: '400px',
+          textAlign: 'center',
+          border: '2px solid #fff',
+          boxShadow: '0 8px 32px rgba(0, 0, 0, 0.4)',
+        }}>
+          <div style={{ fontSize: '24px', marginBottom: '8px' }}>⚠️</div>
+          {alertMessage}
+          <button
+            onClick={() => setShowAlert(false)}
+            style={{
+              marginTop: '12px',
+              padding: '6px 16px',
+              backgroundColor: 'white',
+              color: '#ef4444',
+              border: 'none',
+              borderRadius: '4px',
+              cursor: 'pointer',
+              fontWeight: '600',
+              fontSize: '12px'
+            }}
+          >
+            Dismiss
+          </button>
+        </div>
+      )}
+  
+      <div
+        ref={mapContainer}
+        style={{
+          width: '100%',
+          height: 400,
+          borderRadius: '8px',
+          position: 'relative',
+          zIndex: 1,
+        }}
+        className="map-container"
+        onClick={() => console.log('DIV CLICKED')}
+      />
+    </div>
   );
 };
 
