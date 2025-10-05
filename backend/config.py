@@ -61,6 +61,7 @@ class Config:
     
     # Gemini AI Configuration
     GEMINI_API_KEY = os.getenv('GEMINI_API_KEY', '')
+    print("Check this sht: ", GEMINI_API_KEY)
     
     # Traffic Configuration
     TRAFFIC_TIME_PERIODS = [
